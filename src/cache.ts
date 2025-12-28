@@ -1,87 +1,315 @@
-interface CacheEntry {
+import { loadConfig } from './config.js';
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  hits: number;
+}
+
+interface SearchCacheEntry {
+  results: Array<{ title: string; content: string; url: string; score: number }>;
+  timestamp: number;
+  hits: number;
+}
+
+interface UrlCacheEntry {
   htmlContent: string;
   markdownContent: string;
   timestamp: number;
 }
 
-class SimpleCache {
-  private cache = new Map<string, CacheEntry>();
-  private readonly ttlMs: number;
-  private cleanupInterval: NodeJS.Timeout | null = null;
+class UrlMemoryCache {
+  private urlCache: Map<string, UrlCacheEntry> = new Map();
+  private config = loadConfig().cache;
+  private totalSize = 0;
 
-  constructor(ttlMs: number = 60000) { // Default 1 minute TTL
-    this.ttlMs = ttlMs;
-    this.startCleanup();
+  private shouldEvict(): boolean {
+    return this.totalSize > this.config.maxSize;
   }
 
-  private startCleanup(): void {
-    // Clean up expired entries every 30 seconds
-    this.cleanupInterval = setInterval(() => {
-      this.cleanupExpired();
-    }, 30000);
-  }
+  private evictOldest(): void {
+    let oldestKey: string | null = null;
+    let oldestTime = Infinity;
 
-  private cleanupExpired(): void {
-    const now = Date.now();
-    for (const [key, entry] of this.cache.entries()) {
-      if (now - entry.timestamp > this.ttlMs) {
-        this.cache.delete(key);
+    for (const [key, entry] of this.urlCache) {
+      if (entry.timestamp < oldestTime) {
+        oldestTime = entry.timestamp;
+        oldestKey = key;
       }
+    }
+
+    if (oldestKey) {
+      this.urlCache.delete(oldestKey);
+      this.totalSize -= 1;
     }
   }
 
-  get(url: string): CacheEntry | null {
-    const entry = this.cache.get(url);
+  private isExpired(timestamp: number): boolean {
+    return Date.now() - timestamp > this.config.ttl * 1000;
+  }
+
+  get(url: string): { htmlContent: string; markdownContent: string } | null {
+    if (!this.config.enabled) {
+      return null;
+    }
+
+    const entry = this.urlCache.get(url);
+
     if (!entry) {
       return null;
     }
 
-    // Check if expired
-    if (Date.now() - entry.timestamp > this.ttlMs) {
-      this.cache.delete(url);
+    if (this.isExpired(entry.timestamp)) {
+      this.urlCache.delete(url);
+      this.totalSize -= 1;
       return null;
     }
 
-    return entry;
+    return {
+      htmlContent: entry.htmlContent,
+      markdownContent: entry.markdownContent
+    };
   }
 
   set(url: string, htmlContent: string, markdownContent: string): void {
-    this.cache.set(url, {
-      htmlContent,
-      markdownContent,
-      timestamp: Date.now()
-    });
+    if (!this.config.enabled) {
+      return;
+    }
+
+    if (this.urlCache.has(url)) {
+      const entry = this.urlCache.get(url)!;
+      entry.htmlContent = htmlContent;
+      entry.markdownContent = markdownContent;
+      entry.timestamp = Date.now();
+      return;
+    }
+
+    while (this.shouldEvict() && this.totalSize > 0) {
+      this.evictOldest();
+    }
+
+    if (this.totalSize < this.config.maxSize) {
+      this.urlCache.set(url, {
+        htmlContent,
+        markdownContent,
+        timestamp: Date.now()
+      });
+      this.totalSize += 1;
+    }
   }
 
   clear(): void {
-    this.cache.clear();
+    this.urlCache.clear();
+    this.totalSize = 0;
+  }
+}
+
+class MemoryCache {
+  private searchCache: Map<string, SearchCacheEntry> = new Map();
+  private embeddingCache: Map<string, CacheEntry<number[]>> = new Map();
+  private config = loadConfig().cache;
+  private totalSize = 0;
+
+  private getCacheKey(text: string): string {
+    return text.toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 200);
   }
 
-  destroy(): void {
-    if (this.cleanupInterval) {
-      clearInterval(this.cleanupInterval);
-      this.cleanupInterval = null;
+  private shouldEvict(): boolean {
+    return this.totalSize > this.config.maxSize;
+  }
+
+  private evictOldest(): void {
+    let oldestKey: string | null = null;
+    let oldestTime = Infinity;
+    let minHits = Infinity;
+    let evictKey: string | null = null;
+
+    for (const [key, entry] of this.searchCache) {
+      if (entry.timestamp < oldestTime) {
+        oldestTime = entry.timestamp;
+        oldestKey = key;
+      }
+      if (entry.hits < minHits) {
+        minHits = entry.hits;
+        evictKey = key;
+      }
     }
-    this.clear();
+
+    for (const [key, entry] of this.embeddingCache) {
+      if (entry.timestamp < oldestTime) {
+        oldestTime = entry.timestamp;
+        oldestKey = key;
+      }
+      if (entry.hits < minHits) {
+        minHits = entry.hits;
+        evictKey = key;
+      }
+    }
+
+    if (evictKey) {
+      if (this.searchCache.has(evictKey)) {
+        this.searchCache.delete(evictKey);
+        this.totalSize -= 1;
+      } else if (this.embeddingCache.has(evictKey)) {
+        this.embeddingCache.delete(evictKey);
+        this.totalSize -= 1;
+      }
+    }
   }
 
-  // Get cache statistics for debugging
-  getStats(): { size: number; entries: Array<{ url: string; age: number }> } {
-    const now = Date.now();
-    const entries = Array.from(this.cache.entries()).map(([url, entry]) => ({
-      url,
-      age: now - entry.timestamp
-    }));
+  private isExpired(timestamp: number): boolean {
+    return Date.now() - timestamp > this.config.ttl * 1000;
+  }
+
+  getSearch(query: string): SearchCacheEntry | null {
+    if (!this.config.enabled || !this.config.searchEnabled) {
+      return null;
+    }
+
+    const key = this.getCacheKey(query);
+    const entry = this.searchCache.get(key);
+
+    if (!entry) {
+      return null;
+    }
+
+    if (this.isExpired(entry.timestamp)) {
+      this.searchCache.delete(key);
+      this.totalSize -= 1;
+      return null;
+    }
+
+    entry.hits += 1;
+    return entry;
+  }
+
+  setSearch(query: string, results: SearchCacheEntry['results']): void {
+    if (!this.config.enabled || !this.config.searchEnabled) {
+      return;
+    }
+
+    const key = this.getCacheKey(query);
+
+    if (this.searchCache.has(key)) {
+      const entry = this.searchCache.get(key)!;
+      entry.results = results;
+      entry.timestamp = Date.now();
+      entry.hits += 1;
+      return;
+    }
+
+    while (this.shouldEvict() && this.totalSize > 0) {
+      this.evictOldest();
+    }
+
+    if (this.totalSize < this.config.maxSize) {
+      this.searchCache.set(key, {
+        results,
+        timestamp: Date.now(),
+        hits: 1,
+      });
+      this.totalSize += 1;
+    }
+  }
+
+  getEmbedding(text: string): number[] | null {
+    if (!this.config.enabled || !this.config.embeddingEnabled) {
+      return null;
+    }
+
+    const key = this.getCacheKey(text);
+    const entry = this.embeddingCache.get(key);
+
+    if (!entry) {
+      return null;
+    }
+
+    if (this.isExpired(entry.timestamp)) {
+      this.embeddingCache.delete(key);
+      this.totalSize -= 1;
+      return null;
+    }
+
+    entry.hits += 1;
+    return entry.data;
+  }
+
+  setEmbedding(text: string, embedding: number[]): void {
+    if (!this.config.enabled || !this.config.embeddingEnabled) {
+      return;
+    }
+
+    const key = this.getCacheKey(text);
+
+    if (this.embeddingCache.has(key)) {
+      const entry = this.embeddingCache.get(key)!;
+      entry.data = embedding;
+      entry.timestamp = Date.now();
+      entry.hits += 1;
+      return;
+    }
+
+    while (this.shouldEvict() && this.totalSize > 0) {
+      this.evictOldest();
+    }
+
+    if (this.totalSize < this.config.maxSize) {
+      this.embeddingCache.set(key, {
+        data: embedding,
+        timestamp: Date.now(),
+        hits: 1,
+      });
+      this.totalSize += 1;
+    }
+  }
+
+  clear(): void {
+    this.searchCache.clear();
+    this.embeddingCache.clear();
+    this.totalSize = 0;
+  }
+
+  getStats(): { searchSize: number; embeddingSize: number; totalSize: number; hits: number } {
+    let totalHits = 0;
+    for (const entry of this.searchCache.values()) {
+      totalHits += entry.hits;
+    }
+    for (const entry of this.embeddingCache.values()) {
+      totalHits += entry.hits;
+    }
 
     return {
-      size: this.cache.size,
-      entries
+      searchSize: this.searchCache.size,
+      embeddingSize: this.embeddingCache.size,
+      totalSize: this.totalSize,
+      hits: totalHits,
     };
   }
 }
 
-// Global cache instance
-export const urlCache = new SimpleCache();
+export const urlCache = new UrlMemoryCache();
+export const cache = new MemoryCache();
 
-// Export for testing and cleanup
-export { SimpleCache };
+export function getCachedEmbedding(text: string): number[] | null {
+  return cache.getEmbedding(text);
+}
+
+export function setCachedEmbedding(text: string, embedding: number[]): void {
+  cache.setEmbedding(text, embedding);
+}
+
+export function getCachedSearch(query: string): SearchCacheEntry | null {
+  return cache.getSearch(query);
+}
+
+export function setCachedSearch(query: string, results: SearchCacheEntry['results']): void {
+  cache.setSearch(query, results);
+}
+
+export function clearCache(): void {
+  cache.clear();
+}
+
+export function getCacheStats(): ReturnType<typeof cache.getStats> {
+  return cache.getStats();
+}

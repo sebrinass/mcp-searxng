@@ -11,6 +11,20 @@ import {
   createNoResultsMessage,
   type ErrorContext
 } from "./error-handler.js";
+import { loadConfig } from "./config.js";
+import { rerankResults, getEmbedding } from "./embedding.js";
+import { getCachedSearch, setCachedSearch, getCacheStats } from "./cache.js";
+
+export interface SearchResult {
+  title: string;
+  content: string;
+  url: string;
+  score: number;
+}
+
+export interface ScoredResult extends SearchResult {
+  similarity: number;
+}
 
 export async function performWebSearch(
   server: Server,
@@ -169,10 +183,49 @@ export async function performWebSearch(
     return createNoResultsMessage(query);
   }
 
-  const duration = Date.now() - startTime;
-  logMessage(server, "info", `Search completed: "${query}" (${searchParams}) - ${results.length} results in ${duration}ms`);
+  const cacheKey = `${query}_${pageno}_${time_range}_${language}_${safesearch}`;
+  const cachedResult = getCachedSearch(cacheKey);
+  if (cachedResult) {
+    const duration = Date.now() - startTime;
+    logMessage(server, "info", `Search cache hit: "${query}" (${searchParams}) - ${cachedResult.results.length} results in ${duration}ms (cached)`);
+    const config = loadConfig();
+    return cachedResult.results
+      .slice(0, config.embedding.topK)
+      .map((r) => `Title: ${r.title}\nDescription: ${r.content}\nURL: ${r.url}\nRelevance Score: ${r.score.toFixed(3)}`)
+      .join("\n\n");
+  }
 
-  return results
+  setCachedSearch(cacheKey, results);
+
+  const config = loadConfig();
+  let finalResults = results;
+
+  if (config.embedding.enabled && results.length > 0) {
+    try {
+      logMessage(server, "info", `Starting embedding-based reranking for query: "${query}"`);
+      const queryEmbedding = await getEmbedding(query);
+
+      if (queryEmbedding.length > 0) {
+        const scoredResults = await rerankResults(query, results);
+        finalResults = scoredResults.map((r) => ({
+          title: r.title,
+          content: r.content,
+          url: r.url,
+          score: r.embeddingScore,
+        }));
+        logMessage(server, "info", `Embedding reranking completed: ${scoredResults.length} results ranked by similarity`);
+      } else {
+        logMessage(server, "warning", "Embedding generation failed, falling back to original results");
+      }
+    } catch (error: any) {
+      logMessage(server, "error", `Embedding reranking error: ${error.message}, falling back to original results`);
+    }
+  }
+
+  const duration = Date.now() - startTime;
+  logMessage(server, "info", `Search completed: "${query}" (${searchParams}) - ${finalResults.length} results in ${duration}ms`);
+
+  return finalResults
     .map((r) => `Title: ${r.title}\nDescription: ${r.content}\nURL: ${r.url}\nRelevance Score: ${r.score.toFixed(3)}`)
     .join("\n\n");
 }
