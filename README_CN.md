@@ -22,6 +22,12 @@
 - **时间筛选**：按时间范围（天、月、年）筛选结果
 - **语言选择**：按首选语言筛选结果
 - **安全搜索**：控制搜索结果的内容过滤级别
+- **超时控制**：可配置的 HTTP 请求超时，防止长时间挂起的请求
+- **自定义 User-Agent**：支持自定义 User-Agent 标头，提高网站兼容性
+- **内容分块读取**：支持从指定字符位置开始读取指定长度的内容
+- **HTML 转 Markdown**：自动将 HTML 内容转换为 Markdown 格式，提高可读性
+- **Mozilla Readability**：使用 Mozilla Readability 提取主要内容，去除页面噪音
+- **robots.txt 检查**：可选的 robots.txt 合规性检查，支持缓存以提高性能
 
 ## 分支修改
 
@@ -96,8 +102,18 @@
   - `section` (字符串，可选)：提取特定标题下的内容（搜索标题文本）
   - `paragraphRange` (字符串，可选)：返回特定的段落范围（如：'1-5'、'3'、'10-'）
   - `readHeadings` (布尔值，可选)：仅返回标题列表而非完整内容
+  - `timeoutMs` (数字，可选)：HTTP 请求超时时间，单位毫秒（默认：30000）
   - `sessionId` (字符串，可选)：会话标识符，用于跟踪阅读历史
 - **返回**：提取的内容（Markdown 格式），以及缓存标记信息
+- **特性说明**：
+  - **内容提取**：使用 Mozilla Readability 提取主要内容，去除导航、广告等噪音
+  - **格式转换**：自动将 HTML 内容转换为 Markdown 格式，提高可读性
+  - **分块读取**：支持通过 `startChar` 和 `maxLength` 参数分批读取大文档
+  - **章节筛选**：通过 `section` 参数提取特定标题下的内容
+  - **段落控制**：通过 `paragraphRange` 参数精确控制返回的段落范围
+  - **超时控制**：通过 `timeoutMs` 参数控制请求超时，防止长时间挂起
+  - **robots.txt 检查**：如果启用，会先检查目标网站的 robots.txt 规则
+  - **智能缓存**：URL 内容使用 TTL 缓存，提高性能并减少冗余请求
 
 ## 配置说明
 
@@ -114,6 +130,8 @@
 - **`HTTP_PROXY`** / **`HTTPS_PROXY`**：代理 URL，用于路由流量
   - 格式：`http://[username:password@]proxy.host:port`
 - **`NO_PROXY`**：逗号分隔的 bypass 列表（如：`localhost,.internal,example.com`）
+- **`FETCH_TIMEOUT`**：HTTP 请求超时时间，单位毫秒（默认：`30000`）
+- **`ENABLE_ROBOTS_TXT`**：启用 robots.txt 检查（默认：`false`）
 
 #### 嵌入配置 (Ollama 集成)
 - **`ENABLE_EMBEDDING`**：启用语义嵌入功能（默认：`true`）
@@ -169,7 +187,9 @@
         "USER_AGENT": "MyBot/1.0",
         "HTTP_PROXY": "http://proxy.company.com:8080",
         "HTTPS_PROXY": "http://proxy.company.com:8080",
-        "NO_PROXY": "localhost,127.0.0.1,.local,.internal"
+        "NO_PROXY": "localhost,127.0.0.1,.local,.internal",
+        "FETCH_TIMEOUT": "30000",
+        "ENABLE_ROBOTS_TXT": "false"
       }
     }
   }
@@ -212,7 +232,9 @@ npm install -g mcp-searxng
         "USER_AGENT": "MyBot/1.0",
         "HTTP_PROXY": "http://proxy.company.com:8080",
         "HTTPS_PROXY": "http://proxy.company.com:8080",
-        "NO_PROXY": "localhost,127.0.0.1,.local,.internal"
+        "NO_PROXY": "localhost,127.0.0.1,.local,.internal",
+        "FETCH_TIMEOUT": "30000",
+        "ENABLE_ROBOTS_TXT": "false"
       }
     }
   }
@@ -264,6 +286,8 @@ docker pull isokoliuk/mcp-searxng:latest
         "-e", "HTTP_PROXY",
         "-e", "HTTPS_PROXY",
         "-e", "NO_PROXY",
+        "-e", "FETCH_TIMEOUT",
+        "-e", "ENABLE_ROBOTS_TXT",
         "isokoliuk/mcp-searxng:latest"
       ],
       "env": {
@@ -273,7 +297,9 @@ docker pull isokoliuk/mcp-searxng:latest
         "USER_AGENT": "MyBot/1.0",
         "HTTP_PROXY": "http://proxy.company.com:8080",
         "HTTPS_PROXY": "http://proxy.company.com:8080",
-        "NO_PROXY": "localhost,127.0.0.1,.local,.internal"
+        "NO_PROXY": "localhost,127.0.0.1,.local,.internal",
+        "FETCH_TIMEOUT": "30000",
+        "ENABLE_ROBOTS_TXT": "false"
       }
     }
   }
@@ -310,6 +336,8 @@ services:
       # - HTTP_PROXY=http://proxy.company.com:8080
       # - HTTPS_PROXY=http://proxy.company.com:8080
       # - NO_PROXY=localhost,127.0.0.1,.local,.internal
+      # - FETCH_TIMEOUT=30000
+      # - ENABLE_ROBOTS_TXT=false
 ```
 
 然后配置你的 MCP 客户端：

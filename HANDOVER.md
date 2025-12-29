@@ -409,6 +409,80 @@ SEARXNG_URL=http://localhost:8080 npm run watch
 
 ## 十一、版本历史
 
+### v0.8.0+5（2024年12月29日）- robots.txt 检查功能
+
+#### 核心变更
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| robots.txt 检查 | ✅ | 新增 `ENABLE_ROBOTS_TXT` 环境变量（默认关闭） |
+| robots.txt 缓存 | ✅ | 按域名缓存，TTL 24小时 |
+| robots.txt 解析 | ✅ | 使用 robots-txt-parser 库 |
+| 错误处理 | ✅ | 失败时默认允许访问 |
+
+#### 技术实现
+
+**新增依赖**：
+- `robots-txt-parser` - robots.txt 解析库
+
+**新增文件**：
+- `src/robots.ts` - robots.txt 检查和缓存逻辑
+- `src/robots-txt-parser.d.ts` - TypeScript 类型定义
+
+**修改文件**：
+- `src/config.ts` - 添加 `enableRobotsTxt` 配置项
+- `src/url-reader.ts` - 集成 robots.txt 检查到 URL 读取流程
+
+**核心代码逻辑**：
+
+```typescript
+// 1. robots.txt 检查
+const allowed = await isUrlAllowed(resolvedUrl);
+if (!allowed) {
+  throw createContentError("Access to this URL is blocked by website's robots.txt policy.", resolvedUrl);
+}
+
+// 2. robots.txt 缓存
+const robotsCache = new Map<string, RobotsCacheEntry>();
+const ROBOTS_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+// 3. robots.txt 解析
+const robots = robotsParser.parse(robotsTxt);
+const allowed = robots.isAllowed(url, userAgent);
+```
+
+#### 测试结果
+
+**正常网站（博客园）**：
+- URL: https://www.cnblogs.com/sexintercourse/p/13740316.html
+- 结果: ✅ 成功读取
+- 说明: 博客园允许访问
+
+**读取robots.txt文件**：
+- URL: https://httpbin.org/robots.txt
+- 结果: ✅ 成功读取robots.txt内容
+- 内容: "User-agent: * Disallow: /deny"
+
+**被robots.txt阻止的网站（Google）**：
+- URL: https://www.google.com/search?q=test
+- 结果: ✅ 正确阻止访问
+- 错误: "Access to this URL is blocked by website's robots.txt policy."
+
+#### 功能对比
+
+| 功能 | 之前 | 现在 | 改进 |
+|------|------|------|
+| robots.txt 检查 | ❌ 无 | ✅ 可配置 | 提高成功率 |
+| 延迟影响 | - | +200ms（首次） | 可接受 |
+
+#### 待实现功能
+
+| 优先级 | 功能 | 建议 |
+|-------|------|------|
+| 7 | 其他 Fetch 功能 | 已完成 | 核心功能已实现 |
+
+---
+
 ### v0.8.0+4（2024年12月29日）- Fetch MCP 功能移植
 
 #### 核心变更

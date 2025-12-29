@@ -21,6 +21,12 @@ An [MCP server](https://modelcontextprotocol.io/introduction) implementation tha
 - **Time Filtering**: Filter results by time range (day, month, year).
 - **Language Selection**: Filter results by preferred language.
 - **Safe Search**: Control content filtering level for search results.
+- **Timeout Control**: Configurable HTTP request timeout to prevent long-running requests.
+- **Custom User-Agent**: Support custom User-Agent header for better website compatibility.
+- **Content Chunk Reading**: Read content from specified character position with specified length.
+- **HTML to Markdown**: Automatically convert HTML content to Markdown format for better readability.
+- **Mozilla Readability**: Use Mozilla Readability to extract main content and remove page noise.
+- **robots.txt Checking**: Optional robots.txt compliance checking with caching for performance.
 
 ## Fork Modifications
 
@@ -63,6 +69,16 @@ This fork adds the following enhancements to the original mcp-searxng project:
     - `section` (string, optional): Extract content under a specific heading (searches for heading text)
     - `paragraphRange` (string, optional): Return specific paragraph ranges (e.g., '1-5', '3', '10-')
     - `readHeadings` (boolean, optional): Return only a list of headings instead of full content
+    - `timeoutMs` (number, optional): HTTP request timeout in milliseconds (default: 30000)
+  - Features:
+    - **Content Extraction**: Uses Mozilla Readability to extract main content, removing navigation, ads, and other noise
+    - **Format Conversion**: Automatically converts HTML content to Markdown format for better readability
+    - **Chunk Reading**: Supports reading large documents in chunks using `startChar` and `maxLength` parameters
+    - **Section Filtering**: Extract content under specific headings using the `section` parameter
+    - **Paragraph Control**: Precisely control returned paragraphs using the `paragraphRange` parameter
+    - **Timeout Control**: Control request timeout using the `timeoutMs` parameter to prevent long-running requests
+    - **robots.txt Checking**: If enabled, checks target website's robots.txt rules before fetching
+    - **Intelligent Caching**: URL content is cached with TTL to improve performance and reduce redundant requests
 
 ## Configuration
 
@@ -79,6 +95,8 @@ This fork adds the following enhancements to the original mcp-searxng project:
 - **`HTTP_PROXY`** / **`HTTPS_PROXY`**: Proxy URLs for routing traffic
   - Format: `http://[username:password@]proxy.host:port`
 - **`NO_PROXY`**: Comma-separated bypass list (e.g., `localhost,.internal,example.com`)
+- **`FETCH_TIMEOUT`**: HTTP request timeout in milliseconds (default: `30000`)
+- **`ENABLE_ROBOTS_TXT`**: Enable robots.txt checking (default: `false`)
 
 #### Embedding Configuration (Ollama Integration)
 - **`ENABLE_EMBEDDING`**: Enable semantic embedding feature (default: `true`)
@@ -129,7 +147,9 @@ This fork adds the following enhancements to the original mcp-searxng project:
         "USER_AGENT": "MyBot/1.0",
         "HTTP_PROXY": "http://proxy.company.com:8080",
         "HTTPS_PROXY": "http://proxy.company.com:8080",
-        "NO_PROXY": "localhost,127.0.0.1,.local,.internal"
+        "NO_PROXY": "localhost,127.0.0.1,.local,.internal",
+        "FETCH_TIMEOUT": "30000",
+        "ENABLE_ROBOTS_TXT": "false"
       }
     }
   }
@@ -174,7 +194,9 @@ npm install -g mcp-searxng
         "USER_AGENT": "MyBot/1.0",
         "HTTP_PROXY": "http://proxy.company.com:8080",
         "HTTPS_PROXY": "http://proxy.company.com:8080",
-        "NO_PROXY": "localhost,127.0.0.1,.local,.internal"
+        "NO_PROXY": "localhost,127.0.0.1,.local,.internal",
+        "FETCH_TIMEOUT": "30000",
+        "ENABLE_ROBOTS_TXT": "false"
       }
     }
   }
@@ -226,6 +248,8 @@ docker pull isokoliuk/mcp-searxng:latest
         "-e", "HTTP_PROXY",
         "-e", "HTTPS_PROXY",
         "-e", "NO_PROXY",
+        "-e", "FETCH_TIMEOUT",
+        "-e", "ENABLE_ROBOTS_TXT",
         "isokoliuk/mcp-searxng:latest"
       ],
       "env": {
@@ -235,7 +259,9 @@ docker pull isokoliuk/mcp-searxng:latest
         "USER_AGENT": "MyBot/1.0",
         "HTTP_PROXY": "http://proxy.company.com:8080",
         "HTTPS_PROXY": "http://proxy.company.com:8080",
-        "NO_PROXY": "localhost,127.0.0.1,.local,.internal"
+        "NO_PROXY": "localhost,127.0.0.1,.local,.internal",
+        "FETCH_TIMEOUT": "30000",
+        "ENABLE_ROBOTS_TXT": "false"
       }
     }
   }
@@ -272,6 +298,8 @@ services:
       # - HTTP_PROXY=http://proxy.company.com:8080
       # - HTTPS_PROXY=http://proxy.company.com:8080
       # - NO_PROXY=localhost,127.0.0.1,.local,.internal
+      # - FETCH_TIMEOUT=30000
+      # - ENABLE_ROBOTS_TXT=false
 ```
 
 Then configure your MCP client:
