@@ -14,7 +14,6 @@ import {
 import { loadConfig } from "./config.js";
 import { rerankResults, getEmbedding } from "./embedding.js";
 import { getCachedSearch, setCachedSearch, getCacheStats, isSearchDuplicate, getDuplicateSearchResult, markSearchPerformed, findSimilarSearch, setSimilarSearch } from "./cache.js";
-import { analyzeQuery, splitComparativeQuery, type QueryAnalysis } from "./query-optimizer.js";
 import { incrementSearchRound, recordSearch, getSearchContext, getCacheHint, getDetailedCacheHint, cacheSearchResults } from "./session-tracker.js";
 
 export interface SearchResult {
@@ -26,25 +25,6 @@ export interface SearchResult {
 
 export interface ScoredResult extends SearchResult {
   similarity: number;
-}
-
-export interface OptimizedQueryResult {
-  original: string;
-  optimized: string[];
-  type: 'single' | 'comparative' | 'relational';
-  shouldSplit: boolean;
-  reason: string;
-}
-
-export function optimizeQuery(query: string): OptimizedQueryResult {
-  const analysis = analyzeQuery(query);
-  return {
-    original: analysis.original,
-    optimized: analysis.transformed,
-    type: analysis.type,
-    shouldSplit: analysis.needsSplit,
-    reason: analysis.reason,
-  };
 }
 
 export async function performWebSearch(
@@ -83,7 +63,13 @@ export async function performWebSearch(
       const cacheMarker = detailedCacheHint ? `${detailedCacheHint}\n\n` : '';
       const resultsText = cachedResults
         .slice(0, sessionConfig.embedding.topK)
-        .map((r) => `Title: ${r.title}\nDescription: ${r.content}\nURL: ${r.url}\nRelevance Score: ${r.score.toFixed(3)}`)
+        .map((r) => {
+          let urlText = `URL: ${r.url}`;
+          if (r.url.includes('sogou.com/link?url=')) {
+            urlText += ' ⚠️ [搜狗跳转链接，无法直接读取]';
+          }
+          return `Title: ${r.title}\nDescription: ${r.content}\n${urlText}\nRelevance Score: ${r.score.toFixed(3)}`;
+        })
         .join("\n\n");
       return `${cacheMarker}📋 【缓存命中】此搜索结果来自会话缓存 (${duration}ms)\n\n${resultsText}`;
     } else {
@@ -103,7 +89,13 @@ export async function performWebSearch(
       const cacheMarker = detailedCacheHint ? `${detailedCacheHint}\n\n` : '';
       const resultsText = similarResults
         .slice(0, config.embedding.topK)
-        .map((r) => `Title: ${r.title}\nDescription: ${r.content}\nURL: ${r.url}\nRelevance Score: ${r.score.toFixed(3)}`)
+        .map((r) => {
+          let urlText = `URL: ${r.url}`;
+          if (r.url.includes('sogou.com/link?url=')) {
+            urlText += ' ⚠️ [搜狗跳转链接，无法直接读取]';
+          }
+          return `Title: ${r.title}\nDescription: ${r.content}\n${urlText}\nRelevance Score: ${r.score.toFixed(3)}`;
+        })
         .join("\n\n");
       return `${cacheMarker}🧠 【语义缓存命中】找到相似搜索结果 (${duration}ms)\n\n${resultsText}`;
     }
@@ -253,12 +245,18 @@ export async function performWebSearch(
     logMessage(server, "info", `Search cache hit: "${query}" (${searchParams}) - ${cachedResult.results.length} results in ${duration}ms (cached)`);
     const cachedConfig = loadConfig();
     const cacheHint = getDetailedCacheHint(query);
-    const cacheMarker = cacheHint ? `${cacheHint}\n\n` : '';
-    const resultsText = cachedResult.results
-      .slice(0, cachedConfig.embedding.topK)
-      .map((r) => `Title: ${r.title}\nDescription: ${r.content}\nURL: ${r.url}\nRelevance Score: ${r.score.toFixed(3)}`)
-      .join("\n\n");
-    return `${cacheMarker}💾 【磁盘缓存命中】此搜索结果来自缓存 (${duration}ms)\n\n${resultsText}`;
+  const cacheMarker = cacheHint ? `${cacheHint}\n\n` : '';
+  const resultsText = cachedResult.results
+    .slice(0, cachedConfig.embedding.topK)
+    .map((r) => {
+      let urlText = `URL: ${r.url}`;
+      if (r.url.includes('sogou.com/link?url=')) {
+        urlText += ' ⚠️ [搜狗跳转链接，无法直接读取]';
+      }
+      return `Title: ${r.title}\nDescription: ${r.content}\n${urlText}\nRelevance Score: ${r.score.toFixed(3)}`;
+    })
+    .join("\n\n");
+  return `${cacheMarker}💾 【磁盘缓存命中】此搜索结果来自缓存 (${duration}ms)\n\n${resultsText}`;
   }
 
   setCachedSearch(cacheKey, results);
@@ -308,7 +306,13 @@ export async function performWebSearch(
   const contextMarker = [searchContext, cacheHint].filter(Boolean).join('\n\n');
 
   const resultsText = finalResults
-    .map((r) => `Title: ${r.title}\nDescription: ${r.content}\nURL: ${r.url}\nRelevance Score: ${r.score.toFixed(3)}`)
+    .map((r) => {
+      let urlText = `URL: ${r.url}`;
+      if (r.url.includes('sogou.com/link?url=')) {
+        urlText += ' ⚠️ [搜狗跳转链接，无法直接读取]';
+      }
+      return `Title: ${r.title}\nDescription: ${r.content}\n${urlText}\nRelevance Score: ${r.score.toFixed(3)}`;
+    })
     .join("\n\n");
 
   return `${contextMarker}\n\n🔍 【新搜索结果】耗时 ${duration}ms\n\n${resultsText}`;
