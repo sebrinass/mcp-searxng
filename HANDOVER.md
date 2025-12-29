@@ -409,6 +409,113 @@ SEARXNG_URL=http://localhost:8080 npm run watch
 
 ## 十一、版本历史
 
+### v0.8.0+6（2024年12月29日）- 会话隔离功能
+
+#### 核心变更
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 会话隔离 | ✅ | 搜索历史和阅读历史按 sessionId 分开 |
+| 全局缓存 | ✅ | 搜索结果和 URL 内容缓存全局共享 |
+| 会话清理 | ✅ | 自动清理超过 1 小时的会话 |
+| 会话统计 | ✅ | 新增 getSessionCount() 接口 |
+
+#### 技术实现
+
+**架构设计**：
+- **会话数据**：每个 sessionId 独立的搜索历史和阅读历史
+- **全局缓存**：搜索结果和 URL 内容缓存所有会话共享
+- **自动清理**：每 30 分钟清理一次超过 1 小时的会话
+
+**修改文件**：
+- `src/session-tracker.ts` - 重构为多会话架构
+- `src/search.ts` - 添加 sessionId 参数
+- `src/url-reader.ts` - 添加 sessionId 参数
+- `src/index.ts` - 从 request 中提取 sessionId
+
+**核心代码逻辑**：
+
+```typescript
+// 1. 会话数据结构
+interface SessionContext {
+  searchRound: number;
+  urlReadRound: number;
+  totalSearches: number;
+  totalUrlsRead: number;
+  searchedQueries: string[];
+  readUrls: string[];
+  sessionStartTime: number;
+}
+
+interface GlobalCache {
+  searchResultsCache: Map<string, string>;
+  urlContentCache: Map<string, string>;
+}
+
+// 2. 会话管理
+class SessionTracker {
+  private sessions: Map<string, SessionContext> = new Map();
+  private globalCache: GlobalCache;
+  
+  private getOrCreateSession(sessionId: string): SessionContext {
+    if (!this.sessions.has(sessionId)) {
+      this.sessions.set(sessionId, { /* ... */ });
+    }
+    return this.sessions.get(sessionId)!;
+  }
+  
+  private cleanupOldSessions(): void {
+    const now = Date.now();
+    for (const [sessionId, session] of this.sessions.entries()) {
+      if (now - session.sessionStartTime > this.maxSessionAgeMs) {
+        this.sessions.delete(sessionId);
+      }
+    }
+  }
+}
+
+// 3. 函数签名更新
+recordSearch(sessionId: string, query: string): void
+recordUrlRead(sessionId: string, url: string): void
+getSearchContext(sessionId: string): string
+getUrlReadContext(sessionId: string): string
+getCacheHint(sessionId: string, query: string): string
+getDetailedCacheHint(sessionId: string, query: string): string
+```
+
+#### 功能对比
+
+| 功能 | 之前 | 现在 | 改进 |
+|------|------|------|------|
+| 搜索历史 | 全局共享 | 按会话隔离 | 避免跨会话干扰 |
+| 阅读历史 | 全局共享 | 按会话隔离 | 避免跨会话干扰 |
+| 缓存 | 会话级别 | 全局共享 | 提高缓存命中率 |
+| 会话管理 | 无 | 自动清理 | 防止内存泄漏 |
+
+#### 测试结果
+
+**多会话隔离测试**：
+- 会话 A：搜索"星穹铁道"
+- 会话 B：搜索"绝区零"
+- 结果：✅ 两个会话的搜索历史完全独立
+
+**缓存共享测试**：
+- 会话 A：读取 URL X
+- 会话 B：读取 URL X
+- 结果：✅ 会话 B 正确命中会话 A 的缓存
+
+**会话清理测试**：
+- 创建会话，等待 1 小时
+- 结果：✅ 会话自动清理
+
+#### 待实现功能
+
+| 优先级 | 功能 | 建议 |
+|-------|------|------|
+| - | 核心功能已完善 | - |
+
+---
+
 ### v0.8.0+5（2024年12月29日）- robots.txt 检查功能
 
 #### 核心变更
