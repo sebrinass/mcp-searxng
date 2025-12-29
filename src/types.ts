@@ -105,6 +105,11 @@ export const READ_URL_TOOL: Tool = {
         type: "boolean",
         description: "Return only a list of headings instead of full content",
       },
+      timeoutMs: {
+        type: "number",
+        description: "Request timeout in milliseconds (default: 30000, from FETCH_TIMEOUT_MS env var)",
+        minimum: 1000,
+      },
     },
     required: ["url"],
   },
@@ -127,31 +132,4 @@ export function isWebUrlReadArgs(args: unknown): args is {
   );
 }
 
-export const QUERY_OPTIMIZE_TOOL: Tool = {
-  name: "searxng_analyze_query",
-  description:
-    "Analyze and optimize search queries for better results. " +
-    "Automatically detects comparative/relational questions and splits them into multiple targeted searches. " +
-    "Use this before performing searches on complex questions that compare or relate multiple entities.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      query: {
-        type: "string",
-        description: "The search query to analyze and optimize",
-      },
-    },
-    required: ["query"],
-  },
-};
 
-export function isQueryOptimizeArgs(args: unknown): args is {
-  query: string;
-} {
-  return (
-    typeof args === "object" &&
-    args !== null &&
-    "query" in args &&
-    typeof (args as { query: string }).query === "string"
-  );
-}

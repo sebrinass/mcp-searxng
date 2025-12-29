@@ -15,6 +15,10 @@ export interface CacheConfig {
   embeddingEnabled: boolean;
 }
 
+export interface FetchConfig {
+  timeoutMs: number;
+}
+
 export interface Config {
   searxngUrl: string;
   authUsername?: string;
@@ -25,6 +29,7 @@ export interface Config {
   noProxy?: string;
   embedding: EmbeddingConfig;
   cache: CacheConfig;
+  fetch: FetchConfig;
 }
 
 function getEnv(key: string, defaultValue?: string): string | undefined {
@@ -67,6 +72,9 @@ export function loadConfig(): Config {
       maxSize: getEnvNumber('CACHE_MAX_SIZE', 1000),
       searchEnabled: getEnvBoolean('CACHE_SEARCH', true),
       embeddingEnabled: getEnvBoolean('CACHE_EMBEDDING', true),
+    },
+    fetch: {
+      timeoutMs: getEnvNumber('FETCH_TIMEOUT_MS', 30000),
     },
   };
 }

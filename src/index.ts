@@ -12,9 +12,9 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 // Import modularized functionality
-import { WEB_SEARCH_TOOL, READ_URL_TOOL, isSearXNGWebSearchArgs, QUERY_OPTIMIZE_TOOL, isQueryOptimizeArgs } from "./types.js";
+import { WEB_SEARCH_TOOL, READ_URL_TOOL, isSearXNGWebSearchArgs } from "./types.js";
 import { logMessage, setLogLevel } from "./logging.js";
-import { performWebSearch, optimizeQuery } from "./search.js";
+import { performWebSearch } from "./search.js";
 import { fetchAndConvertToMarkdown, fetchAndConvertToMarkdownBatch } from "./url-reader.js";
 import { createConfigResource, createHelpResource } from "./resources.js";
 import { createHttpServer } from "./http-server.js";
@@ -38,6 +38,7 @@ export function isWebUrlReadArgs(args: unknown): args is {
   section?: string;
   paragraphRange?: string;
   readHeadings?: boolean;
+  timeoutMs?: number;
 } {
   if (
     typeof args !== "object" ||
@@ -76,6 +77,9 @@ export function isWebUrlReadArgs(args: unknown): args is {
   if (urlArgs.readHeadings !== undefined && typeof urlArgs.readHeadings !== "boolean") {
     return false;
   }
+  if (urlArgs.timeoutMs !== undefined && (typeof urlArgs.timeoutMs !== "number" || urlArgs.timeoutMs < 1000)) {
+    return false;
+  }
 
   return true;
 }
@@ -99,10 +103,6 @@ const server = new Server(
           description: READ_URL_TOOL.description,
           schema: READ_URL_TOOL.inputSchema,
         },
-        searxng_analyze_query: {
-          description: QUERY_OPTIMIZE_TOOL.description,
-          schema: QUERY_OPTIMIZE_TOOL.inputSchema,
-        },
       },
     },
   }
@@ -112,7 +112,7 @@ const server = new Server(
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   logMessage(server, "debug", "Handling list_tools request");
   return {
-    tools: [WEB_SEARCH_TOOL, READ_URL_TOOL, QUERY_OPTIMIZE_TOOL],
+    tools: [WEB_SEARCH_TOOL, READ_URL_TOOL],
   };
 });
 
@@ -161,9 +161,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       if (args.urls && Array.isArray(args.urls) && args.urls.length > 0) {
         logMessage(server, "info", `Batch URL reading: ${args.urls.length} URLs`);
-        result = await fetchAndConvertToMarkdownBatch(server, args.urls, 10000, paginationOptions);
+        result = await fetchAndConvertToMarkdownBatch(server, args.urls, args.timeoutMs, paginationOptions);
       } else if (args.url) {
-        result = await fetchAndConvertToMarkdown(server, args.url, 10000, paginationOptions);
+        result = await fetchAndConvertToMarkdown(server, args.url, args.timeoutMs, paginationOptions);
       } else {
         throw new Error("Either 'url' or 'urls' parameter must be provided");
       }
@@ -173,24 +173,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           {
             type: "text",
             text: result,
-          },
-        ],
-      };
-    } else if (name === "searxng_analyze_query") {
-      if (!isQueryOptimizeArgs(args)) {
-        throw new Error("Invalid arguments for query optimization");
-      }
-
-      const optimized = optimizeQuery(args.query);
-      const analysisResult = JSON.stringify(optimized, null, 2);
-
-      logMessage(server, "info", `Query analysis: "${args.query}" -> type: ${optimized.type}, shouldSplit: ${optimized.shouldSplit}`);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: analysisResult,
           },
         ],
       };

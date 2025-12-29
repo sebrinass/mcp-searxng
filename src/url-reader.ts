@@ -4,6 +4,7 @@ import { createProxyAgent } from "./proxy.js";
 import { logMessage } from "./logging.js";
 import { urlCache } from "./cache.js";
 import { incrementUrlReadRound, recordUrlRead, getUrlReadContext, getCacheHint, getDetailedCacheHint, cacheUrlContent } from "./session-tracker.js";
+import { loadConfig } from "./config.js";
 import {
   createURLFormatError,
   createNetworkError,
@@ -110,6 +111,33 @@ function extractHeadings(markdownContent: string): string {
   return headings.join('\n');
 }
 
+function resolveRedirectUrl(server: Server, url: string): string {
+  try {
+    const parsedUrl = new URL(url);
+
+    // Detect various redirect link formats (sogou, baidu, 360, etc.)
+    if (parsedUrl.searchParams.has('url')) {
+      let realUrl = parsedUrl.searchParams.get('url');
+      
+      if (realUrl) {
+        // Handle relative URLs (no protocol prefix)
+        if (!realUrl.startsWith('http://') && !realUrl.startsWith('https://')) {
+          // Try to construct full URL from the redirect link's base
+          const baseUrl = `${parsedUrl.protocol}//${parsedUrl.host}`;
+          realUrl = new URL(realUrl, baseUrl).href;
+        }
+        
+        logMessage(server, 'info', `Resolved redirect URL: ${url} -> ${realUrl}`);
+        return realUrl;
+      }
+    }
+
+    return url;
+  } catch {
+    return url;
+  }
+}
+
 function applyPaginationOptions(markdownContent: string, options: PaginationOptions): string {
   let result = markdownContent;
 
@@ -145,11 +173,17 @@ function applyPaginationOptions(markdownContent: string, options: PaginationOpti
 export async function fetchAndConvertToMarkdown(
   server: Server,
   url: string,
-  timeoutMs: number = 10000,
+  timeoutMs?: number,
   paginationOptions: PaginationOptions = {}
 ) {
   const startTime = Date.now();
-  logMessage(server, "info", `Fetching URL: ${url}`);
+  const config = loadConfig();
+  
+  const fetchTimeout = timeoutMs ?? config.fetch.timeoutMs;
+  
+  const userAgent = config.userAgent || "MCP-SearXNG/1.0 (+https://github.com/sebrinass/mcp-searxng)";
+  
+  logMessage(server, "info", `Fetching URL: ${url} (timeout: ${fetchTimeout}ms, user-agent: ${userAgent})`);
 
   incrementUrlReadRound();
   const cacheHint = getCacheHint(url);
@@ -157,16 +191,19 @@ export async function fetchAndConvertToMarkdown(
     logMessage(server, "info", `Cache hint: ${cacheHint}`);
   }
 
+  // Resolve redirect URLs (sogou, baidu, 360, etc.)
+  const resolvedUrl = resolveRedirectUrl(server, url);
+
   // Check cache first
-  const cachedEntry = urlCache.get(url);
+  const cachedEntry = urlCache.get(resolvedUrl);
   if (cachedEntry) {
-    logMessage(server, "info", `Using cached content for URL: ${url}`);
-    recordUrlRead(url);
+    logMessage(server, "info", `Using cached content for URL: ${resolvedUrl}`);
+    recordUrlRead(resolvedUrl);
     const result = applyPaginationOptions(cachedEntry.markdownContent, paginationOptions);
     const duration = Date.now() - startTime;
-    logMessage(server, "info", `Processed cached URL: ${url} (${result.length} chars in ${duration}ms)`);
+    logMessage(server, "info", `Processed cached URL: ${resolvedUrl} (${result.length} chars in ${duration}ms)`);
     
-    const cacheHint = getDetailedCacheHint(url);
+    const cacheHint = getDetailedCacheHint(resolvedUrl);
     const cacheMarker = cacheHint ? `${cacheHint}\n\n` : '';
     const readContext = getUrlReadContext();
     
@@ -176,25 +213,28 @@ export async function fetchAndConvertToMarkdown(
   // Validate URL format
   let parsedUrl: URL;
   try {
-    parsedUrl = new URL(url);
+    parsedUrl = new URL(resolvedUrl);
   } catch (error) {
-    logMessage(server, "error", `Invalid URL format: ${url}`);
-    throw createURLFormatError(url);
+    logMessage(server, "error", `Invalid URL format: ${resolvedUrl}`);
+    throw createURLFormatError(resolvedUrl);
   }
 
   // Create an AbortController instance
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutId = setTimeout(() => controller.abort(), fetchTimeout);
 
   try {
     // Prepare request options with proxy support
     const requestOptions: RequestInit = {
       signal: controller.signal,
+      headers: {
+        "User-Agent": userAgent
+      }
     };
 
     // Add proxy dispatcher if proxy is configured
     // Node.js fetch uses 'dispatcher' option for proxy, not 'agent'
-    const proxyAgent = createProxyAgent(url);
+    const proxyAgent = createProxyAgent(resolvedUrl);
     if (proxyAgent) {
       (requestOptions as any).dispatcher = proxyAgent;
     }
@@ -202,10 +242,10 @@ export async function fetchAndConvertToMarkdown(
     let response: Response;
     try {
       // Fetch the URL with the abort signal
-      response = await fetch(url, requestOptions);
+      response = await fetch(resolvedUrl, requestOptions);
     } catch (error: any) {
       const context: ErrorContext = {
-        url,
+        url: resolvedUrl,
         proxyAgent: !!proxyAgent,
         timeout: timeoutMs
       };
@@ -220,7 +260,7 @@ export async function fetchAndConvertToMarkdown(
         responseBody = '[Could not read response body]';
       }
 
-      const context: ErrorContext = { url };
+      const context: ErrorContext = { url: resolvedUrl };
       throw createServerError(response.status, response.statusText, responseBody, context);
     }
 
@@ -231,12 +271,12 @@ export async function fetchAndConvertToMarkdown(
     } catch (error: any) {
       throw createContentError(
         `Failed to read website content: ${error.message || 'Unknown error reading content'}`,
-        url
+        resolvedUrl
       );
     }
 
     if (!htmlContent || htmlContent.trim().length === 0) {
-      throw createContentError("Website returned empty content.", url);
+      throw createContentError("Website returned empty content.", resolvedUrl);
     }
 
     // Convert HTML to Markdown
@@ -244,19 +284,19 @@ export async function fetchAndConvertToMarkdown(
     try {
       markdownContent = NodeHtmlMarkdown.translate(htmlContent);
     } catch (error: any) {
-      throw createConversionError(error, url, htmlContent);
+      throw createConversionError(error, resolvedUrl, htmlContent);
     }
 
     if (!markdownContent || markdownContent.trim().length === 0) {
-      logMessage(server, "warning", `Empty content after conversion: ${url}`);
+      logMessage(server, "warning", `Empty content after conversion: ${resolvedUrl}`);
       // DON'T cache empty/failed conversions - return warning directly
-      return createEmptyContentWarning(url, htmlContent.length, htmlContent);
+      return createEmptyContentWarning(resolvedUrl, htmlContent.length, htmlContent);
     }
 
     // Only cache successful markdown conversion
-    urlCache.set(url, htmlContent, markdownContent);
+    urlCache.set(resolvedUrl, htmlContent, markdownContent);
     
-    cacheUrlContent(url, markdownContent);
+    cacheUrlContent(resolvedUrl, markdownContent);
 
     // Apply pagination options
     const result = applyPaginationOptions(markdownContent, paginationOptions);
@@ -264,27 +304,27 @@ export async function fetchAndConvertToMarkdown(
     const duration = Date.now() - startTime;
     logMessage(server, "info", `Successfully fetched and converted URL: ${url} (${result.length} chars in ${duration}ms)`);
     
-    recordUrlRead(url);
+    recordUrlRead(resolvedUrl);
     
     const readContext = getUrlReadContext();
-    const cacheHint = getDetailedCacheHint(url);
+    const cacheHint = getDetailedCacheHint(resolvedUrl);
     const contextMarker = [readContext, cacheHint].filter(Boolean).join('\n\n');
     
-    return `${contextMarker}\n\n📄 【新页面内容】${url} (${result.length}字符, ${duration}ms)\n\n${result}`;
+    return `${contextMarker}\n\n📄 【新页面内容】${resolvedUrl} (${result.length}字符, ${duration}ms)\n\n${result}`;
   } catch (error: any) {
     if (error.name === "AbortError") {
-      logMessage(server, "error", `Timeout fetching URL: ${url} (${timeoutMs}ms)`);
-      throw createTimeoutError(timeoutMs, url);
+      logMessage(server, "error", `Timeout fetching URL: ${resolvedUrl} (${fetchTimeout}ms)`);
+      throw createTimeoutError(fetchTimeout, resolvedUrl);
     }
     // Re-throw our enhanced errors
     if (error.name === 'MCPSearXNGError') {
-      logMessage(server, "error", `Error fetching URL: ${url} - ${error.message}`);
+      logMessage(server, "error", `Error fetching URL: ${resolvedUrl} - ${error.message}`);
       throw error;
     }
     
     // Catch any unexpected errors
-    logMessage(server, "error", `Unexpected error fetching URL: ${url}`, error);
-    const context: ErrorContext = { url };
+    logMessage(server, "error", `Unexpected error fetching URL: ${resolvedUrl}`, error);
+    const context: ErrorContext = { url: resolvedUrl };
     throw createUnexpectedError(error, context);
   } finally {
     // Clean up the timeout to prevent memory leaks
@@ -295,11 +335,14 @@ export async function fetchAndConvertToMarkdown(
 export async function fetchAndConvertToMarkdownBatch(
   server: Server,
   urls: string[],
-  timeoutMs: number = 10000,
+  timeoutMs?: number,
   paginationOptions: PaginationOptions = {}
 ): Promise<string> {
   const startTime = Date.now();
-  logMessage(server, "info", `Starting batch URL fetch: ${urls.length} URLs`);
+  const config = loadConfig();
+  const fetchTimeout = timeoutMs ?? config.fetch.timeoutMs;
+  
+  logMessage(server, "info", `Starting batch URL fetch: ${urls.length} URLs (timeout: ${fetchTimeout}ms)`);
 
   if (urls.length === 0) {
     return "No URLs provided for batch reading.";
