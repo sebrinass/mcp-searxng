@@ -21,6 +21,7 @@ ENV NODE_ENV=production
 RUN npm ci --ignore-scripts --omit-dev
 
 ENV SEARXNG_URL=http://localhost:8080
+ENV MCP_HTTP_PORT=1234
 ENV ENABLE_EMBEDDING=true
 ENV OLLAMA_HOST=http://localhost:11434
 ENV EMBEDDING_MODEL=nomic-embed-text
@@ -32,5 +33,7 @@ ENV CACHE_TTL=300
 ENV CACHE_MAX_SIZE=1000
 ENV CACHE_SEARCH=true
 ENV CACHE_EMBEDDING=true
+
+EXPOSE 1234
 
 ENTRYPOINT ["node", "dist/index.js"]

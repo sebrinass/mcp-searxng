@@ -49,7 +49,7 @@ export async function createHttpServer(server: Server): Promise<express.Applicat
         }
       };
 
-      // Connect the existing server to the new transport
+      // Connect the existing server to the new transport BEFORE handling the request
       await server.connect(transport);
     } else if (sessionId && !transports[sessionId]) {
       // Session ID provided but not found - create new session for this ID
