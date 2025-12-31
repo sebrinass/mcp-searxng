@@ -9,17 +9,17 @@ Complete configuration reference for MCP-SearXNG server.
 | Category | Variable | Required | Default |
 |----------|-----------|----------|
 | **Basic** | `SEARXNG_URL` | ✅ Yes | - |
-| **Embedding** | `ENABLE_EMBEDDING` | No | `true` |
+| **Embedding** | `ENABLE_EMBEDDING` | No | `false` |
 | | `OLLAMA_HOST` | No | `http://localhost:11434` |
 | | `EMBEDDING_MODEL` | No | `nomic-embed-text` |
 | | `TOP_K` | No | `3` |
 | | `CHUNK_SIZE` | No | `1000` |
 | | `CHUNK_OVERLAP` | No | `100` |
-| **Cache** | `ENABLE_CACHE` | No | `true` |
+| **Cache** | `ENABLE_CACHE` | No | `false` |
 | | `CACHE_TTL` | No | `300` |
 | | `CACHE_MAX_SIZE` | No | `1000` |
-| | `CACHE_SEARCH` | No | `true` |
-| | `CACHE_EMBEDDING` | No | `true` |
+| | `CACHE_SEARCH` | No | `false` |
+| | `CACHE_EMBEDDING` | No | `false` |
 | **Network** | `FETCH_TIMEOUT` | No | `30000` |
 | | `USER_AGENT` | No | - |
 | | `HTTP_PROXY` | No | - |
@@ -163,7 +163,7 @@ NO_PROXY=localhost,127.0.0.1,.local,.internal,example.com
 
 **Required:** No
 
-**Default:** `true`
+**Default:** `false`
 
 **Description:** Enable hybrid retrieval feature combining BM25 (sparse) and semantic (dense) retrieval.
 
@@ -173,8 +173,8 @@ NO_PROXY=localhost,127.0.0.1,.local,.internal,example.com
 
 **Examples:**
 ```bash
-ENABLE_EMBEDDING=true    # Enable hybrid retrieval (recommended)
-ENABLE_EMBEDDING=false   # Disable, use keyword-only search
+ENABLE_EMBEDDING=true    # Enable hybrid retrieval
+ENABLE_EMBEDDING=false   # Disable, use keyword-only search (default)
 ```
 
 **Notes:**
@@ -294,24 +294,24 @@ CHUNK_OVERLAP=200   # High overlap
 
 **Required:** No
 
-**Default:** `true`
+**Default:** `false`
 
 **Description:** Enable caching feature for URLs, search results, and embeddings.
 
 **Values:**
 - `true` - Enable caching
-- `false` - Disable caching
+- `false` - Disable caching (default)
 
 **Examples:**
 ```bash
-ENABLE_CACHE=true     # Enable caching (recommended)
-ENABLE_CACHE=false    # Disable caching
+ENABLE_CACHE=true     # Enable caching
+ENABLE_CACHE=false    # Disable caching (default)
 ```
 
 **Notes:**
 - Caching significantly improves performance
 - Reduces redundant network requests
-- Recommended to keep enabled
+- Requires explicit enable for advanced features
 
 ### CACHE_TTL
 
@@ -360,47 +360,47 @@ CACHE_MAX_SIZE=5000  # Larger cache, more memory
 
 **Required:** No
 
-**Default:** `true`
+**Default:** `false`
 
 **Description:** Enable caching for search results.
 
 **Values:**
 - `true` - Cache search results
-- `false` - Don't cache search results
+- `false` - Don't cache search results (default)
 
 **Examples:**
 ```bash
-CACHE_SEARCH=true   # Cache search results (recommended)
-CACHE_SEARCH=false  # Don't cache search results
+CACHE_SEARCH=true   # Cache search results
+CACHE_SEARCH=false  # Don't cache search results (default)
 ```
 
 **Notes:**
 - Search results include semantic similarity scores
 - Caching reduces redundant SearXNG queries
-- Recommended to keep enabled
+- Requires ENABLE_CACHE=true to work
 
 ### CACHE_EMBEDDING
 
 **Required:** No
 
-**Default:** `true`
+**Default:** `false`
 
 **Description:** Enable caching for embedding vectors.
 
 **Values:**
 - `true` - Cache embeddings
-- `false` - Don't cache embeddings
+- `false` - Don't cache embeddings (default)
 
 **Examples:**
 ```bash
-CACHE_EMBEDDING=true   # Cache embeddings (recommended)
-CACHE_EMBEDDING=false  # Don't cache embeddings
+CACHE_EMBEDDING=true   # Cache embeddings
+CACHE_EMBEDDING=false  # Don't cache embeddings (default)
 ```
 
 **Notes:**
 - Embeddings are computationally expensive to generate
 - Caching significantly improves performance
-- Recommended to keep enabled
+- Requires ENABLE_CACHE=true to work
 
 ---
 

@@ -200,8 +200,9 @@ services:
 **必填：**
 - `SEARXNG_URL`：你的 SearXNG 实例 URL
 
-**可选（推荐）：**
-- `ENABLE_EMBEDDING`：启用混合检索（默认：`true`）
+**可选：**
+- `ENABLE_EMBEDDING`：启用混合检索（默认：`false`）
+- `ENABLE_CACHE`：启用缓存（默认：`false`）
 - `OLLAMA_HOST`：Ollama 服务器 URL（默认：`http://localhost:11434`）
 - `EMBEDDING_MODEL`：嵌入模型（默认：`nomic-embed-text`）
 
