@@ -47,11 +47,11 @@
 ### 🛡️ robots.txt 合规
 - 可选的 robots.txt 检查
 - 按域名缓存（24h TTL）
-- 错误时优雅降级
+- 错误时降级
 
 ## 工具
 
-### `search`（原名 `searxng_web_search`）
+### `search`
 
 执行网络搜索，支持智能缓存和语义重排序。
 
@@ -78,7 +78,7 @@
 }
 ```
 
-### `read`（原名 `web_url_read`）
+### `read`
 
 读取 URL 内容并转换为 Markdown，支持高级提取。
 
@@ -191,9 +191,6 @@ services:
 }
 ```
 
-## 配置
-
-详细配置选项请查看 [CONFIGURATION.md](./CONFIGURATION.md)。
 
 ### 快速配置
 
@@ -280,15 +277,6 @@ npm run test:coverage      # 生成覆盖率报告
 npm run inspector          # 使用 MCP inspector 测试
 ```
 
-## 版本历史
-
-- **v0.8.0+7**（2025-12-30）：混合检索、Puppeteer 自动降级、简化工具名称
-- **v0.8.0+6**（2025-12-29）：会话隔离、全局缓存
-- **v0.8.0+5**（2025-12-29）：robots.txt 检查
-- **v0.8.0+4**（2025-12-29）：Fetch 功能（超时、User-Agent、内容提取）
-- **v0.8.0+1**（2025-12-29）：初始 Fork，添加语义嵌入
-
-详细版本历史请查看 [HANDOVER.md](./HANDOVER.md)。
 
 ## 许可证
 
@@ -300,4 +288,3 @@ MIT 许可证 - 详情请查看 [LICENSE](./LICENSE) 文件。
 - [MCP 协议](https://modelcontextprotocol.io/introduction)
 - [Ollama 文档](https://ollama.com)
 - [详细配置](./CONFIGURATION.md)
-- [项目交接文档](./HANDOVER.md)
