@@ -1,8 +1,8 @@
-# MCP-SearXNG Server
+# MCP Augmented Search
 
-A fork of [ihor-sokoliuk/mcp-searxng](https://github.com/ihor-sokoliuk/mcp-searxng) that integrates [SearXNG](https://docs.searxng.org) with advanced features including hybrid retrieval, intelligent caching, and automatic JavaScript rendering.
+MCP Augmented Search is a Model Context Protocol (MCP) server that integrates [SearXNG](https://docs.searxng.org) with hybrid retrieval, semantic caching, and structured thinking framework. It transforms a self-hosted SearXNG search engine into an enhanced search module for AI assistants. The core approach uses local hybrid retrieval and semantic caching to "purify" and deduplicate massive, unstable web search results, injecting only the most relevant, high-quality information into the AI context. Additionally, it provides a structured thinking tool that forces the model to bind reasoning with information sources, forming a traceable search chain. The economic efficiency of the entire module is built on the premise that computational tasks like embedding models run completely locally with near-zero marginal cost, thereby achieving the fusion of general-purpose large models with precise, controllable information acquisition capabilities.
 
-Thanks to [ihor-sokoliuk](https://github.com/ihor-sokoliuk) for the excellent original work.
+Forked from [ihor-sokoliuk/mcp-searxng](https://github.com/ihor-sokoliuk/mcp-searxng).
 
 [中文文档](./README_CN.md) | [详细配置](./CONFIGURATION.md)
 
@@ -24,36 +24,27 @@ Thanks to [ihor-sokoliuk](https://github.com/ihor-sokoliuk) for the excellent or
 
 ## Core Features
 
-### 🔍 Intelligent Search
-- **Hybrid Retrieval**: Combines BM25 (sparse) and semantic (dense) retrieval for better results
-- **Semantic Caching**: Smart cache with 0.95 similarity threshold to reduce redundant queries
-- **Time Filtering**: Filter results by day, month, or year
-- **Language Selection**: Get results in your preferred language
-- **Safe Search**: Control content filtering level
+### Hybrid Retrieval
+- **BM25 + Embedding**: Combines sparse (keyword) and dense (semantic) retrieval
+- **Smart Ranking**: 30% BM25 + 70% semantic similarity for better results
+- **Top-K Control**: Returns only most relevant results to save tokens
 
-### 📄 Advanced Content Reading
-- **Auto Fallback**: When fetch fails, automatically uses Puppeteer (optional) to render JavaScript
-- **Content Extraction**: Mozilla Readability extracts main content, removes noise
-- **Chunk Reading**: Read large documents in parts to save tokens
-- **HTML to Markdown**: Automatic conversion for better readability
-- **Section Filtering**: Extract content under specific headings
+### Semantic Caching
+- **Similarity Threshold**: 0.95 for intelligent cache hits
+- **Multi-Level Cache**: URLs, search results, and embeddings
+- **Session Isolation**: Independent history per conversation
+- **Auto Cleanup**: TTL-based expiration
 
-### 🧠 Smart Caching
-- **Multi-Level Cache**: Separate caches for URLs, search results, and embeddings
-- **Session Isolation**: Each conversation has independent history
-- **Global Sharing**: Cache shared across conversations for efficiency
-- **Auto Cleanup**: Sessions older than 1 hour are automatically cleaned
+### Content Reading
+- **Auto Fallback**: Fetch → Puppeteer when JavaScript rendering needed
+- **Content Extraction**: Mozilla Readability removes noise
+- **HTML to Markdown**: Automatic conversion
+- **Chunk Reading**: Split large documents into parts
 
-### 🛡️ robots.txt Compliance
-- Optional robots.txt checking
-- Per-domain caching (24h TTL)
-- Graceful fallback on errors
-
-### 🧪 Research Framework
-- **Structured Thinking**: Guides models through step-by-step analysis
-- **Multi-Step Research**: Breaks complex tasks into manageable steps
-- **Tool Integration**: Works with search and read for information gathering
-- **Flexible Workflow**: Supports revisions and branching of thought processes
+### Structured Thinking
+- **Step-by-Step Guide**: Guides models through research process
+- **Evidence Tracking**: Links conclusions to information sources
+- **Flexible Workflow**: Supports revisions and branching
 
 ## Tools
 
@@ -116,7 +107,7 @@ Read URL content
 
 ### `research`
 
-Guide search planning steps
+Structured thinking framework for research planning
 
 **Parameters:**
 - `thought` (string, required): Current thinking step
@@ -128,11 +119,12 @@ Guide search planning steps
 - `branchFromThought` (number, optional): Branch starting point
 - `branchId` (string, optional): Branch identifier
 - `needsMoreThoughts` (boolean, optional): Whether more thoughts needed
+- `informationSummary` (string, optional): Evidence supporting current conclusion
+- `searchedKeywords` (array, optional): List of searched keywords
 
 **Features:**
-- **Structured Thinking**: Guides models through step-by-step analysis
-- **Multi-Step Research**: Breaks complex tasks into manageable steps
-- **Tool Integration**: Works with search and read for information gathering
+- **Step-by-Step Guide**: Structured research process
+- **Evidence Tracking**: Links conclusions to sources
 - **Flexible Workflow**: Supports revisions and branching
 
 **Example:**
@@ -258,7 +250,7 @@ For detailed configuration options, see [CONFIGURATION.md](./CONFIGURATION.md).
 
 ## Architecture
 
-### Hybrid Retrieval System
+### Hybrid Retrieval
 
 ```
 Query
@@ -270,7 +262,7 @@ Query
       Ranked Results
 ```
 
-### Content Reading Flow
+### Content Reading
 
 ```
 URL Request
@@ -286,7 +278,7 @@ Readability     Final HTML
 Markdown ←────────────┘
 ```
 
-### Caching Strategy
+### Caching
 
 ```
 Request

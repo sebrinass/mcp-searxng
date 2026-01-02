@@ -22,10 +22,15 @@ import {
 
 let puppeteer: any = null;
 
-try {
-  puppeteer = require('puppeteer-core');
-} catch (e) {
-  console.log('Puppeteer not installed. Browser rendering disabled.');
+async function getPuppeteer() {
+  if (!puppeteer) {
+    try {
+      puppeteer = await import('puppeteer-core');
+    } catch (e) {
+      console.log('Puppeteer not installed. Browser rendering disabled.');
+    }
+  }
+  return puppeteer;
 }
 
 interface PaginationOptions {
@@ -39,7 +44,8 @@ interface PaginationOptions {
 let browser: any = null;
 
 async function getBrowser(): Promise<any> {
-  if (!puppeteer) {
+  const puppeteerModule = await getPuppeteer();
+  if (!puppeteerModule) {
     throw new Error('Puppeteer not installed. Browser rendering disabled.');
   }
   
@@ -49,7 +55,7 @@ async function getBrowser(): Promise<any> {
       process.platform === 'darwin' ? '/Applications/Chromium.app/Contents/MacOS/Chromium' : 
       'C:\\Program Files\\Chromium\\Application\\chrome.exe';
     
-    browser = await puppeteer.launch({
+    browser = await puppeteerModule.launch({
       executablePath: chromiumPath,
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox']

@@ -10,6 +10,8 @@ export interface ThoughtData {
   branchId?: string;
   needsMoreThoughts?: boolean;
   nextThoughtNeeded: boolean;
+  informationSummary?: string;
+  searchedKeywords?: string[];
 }
 
 export class ResearchServer {
@@ -101,8 +103,19 @@ export const RESEARCH_TOOL: Tool = {
       needsMoreThoughts: {
         type: "boolean",
         description: "If more thoughts are needed"
+      },
+      informationSummary: {
+        type: "string",
+        description: "【必填 - 本步骤的唯一证据栏】仅填写直接支撑上述结论的最新、最具体信息。必须源自本步骤前刚执行的行动（如 `read` 或 `search`）。格式应为：'关键发现：[具体事实、数据或原文引用]。' 严禁复述之前步骤已提交的信息。"
+      },
+      searchedKeywords: {
+        type: "array",
+        items: {
+          type: "string"
+        },
+        description: "【必填】本次调用前已经搜索过的关键词列表。用于避免重复搜索相同或相似的内容。每次调用search工具后，应在下一次调用时将新的搜索词添加到此列表中。AI通过对话历史自动维护完整的搜索词列表。如果是第一次调用且尚未搜索，填写['无']。"
       }
     },
-    required: ["thought", "nextThoughtNeeded", "thoughtNumber", "totalThoughts"]
+    required: ["thought", "nextThoughtNeeded", "thoughtNumber", "totalThoughts", "informationSummary", "searchedKeywords"]
   }
 };
