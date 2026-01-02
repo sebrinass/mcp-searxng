@@ -57,7 +57,7 @@ Use SearXNG to search
 - `pageno` (number, optional): Page number (default: 1)
 - `time_range` (string, optional): "day", "month", or "year"
 - `language` (string, optional): Language code (e.g., "en", "zh")
-- `safesearch` (string, optional): "0" (none), "1" (moderate), "2" (strict)
+- `safesearch` (number, optional): 0 (none), 1 (moderate), 2 (strict)
 - `sessionId` (string, optional): Session identifier for tracking
 
 **Returns:**
@@ -81,13 +81,13 @@ Read URL content
 
 **Parameters:**
 - `url` (string, required): URL to read
-- `urls` (string[], optional): Batch read multiple URLs
-- `startChar` (number, optional): Starting character position (default: 0)
-- `maxLength` (number, optional): Maximum characters to return (default: 5000)
+- `startChar` (number, optional): Start position (default: 0)
+- `maxLength` (number, optional): Max characters to return
 - `section` (string, optional): Extract content under specific heading
-- `paragraphRange` (string, optional): Return specific paragraph ranges (e.g., "1-5", "3", "10-")
+- `paragraphRange` (string, optional): Paragraph range (e.g., "1-5", "3")
 - `readHeadings` (boolean, optional): Return only headings list
 - `timeoutMs` (number, optional): Request timeout in ms (default: 30000)
+- `sessionId` (string, optional): Session identifier
 
 **Features:**
 - **Auto Puppeteer Fallback**: Renders JavaScript when fetch fails
@@ -319,27 +319,6 @@ npm test                    # Run all tests
 npm run test:coverage      # Generate coverage report
 npm run inspector          # Test with MCP inspector
 ```
-
-## Architecture & Integrations
-
-This project integrates proven technologies from multiple open-source projects:
-
-### URL Reading (read tool)
-- **Content Extraction**: Uses [@mozilla/readability](https://github.com/mozilla/readability) for extracting main content from HTML
-- **HTML to Markdown**: Uses [node-html-markdown](https://github.com/stonekite/node-html-markdown) for conversion
-- **JavaScript Rendering**: Puppeteer fallback for SPA (Single Page Application) support
-- **Inspired by**: [Jina AI Reader](https://github.com/jina-ai/reader)
-
-### Structured Thinking (research tool)
-- **Framework**: Step-by-step thinking process with evidence tracking
-- **Features**: Thought history, revision support, branching workflow
-- **Based on**: [MCP Sequential Thinking](https://github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking)
-
-### Hybrid Retrieval
-- **Sparse Retrieval**: BM25 algorithm for keyword matching
-- **Dense Retrieval**: Ollama embeddings for semantic similarity
-- **Fusion**: Weighted combination (30% BM25 + 70% semantic)
-- **Custom Implementation**: Locally optimized for AI assistant workflows
 
 ## Links
 

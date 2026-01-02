@@ -106,14 +106,14 @@ export const RESEARCH_TOOL: Tool = {
       },
       informationSummary: {
         type: "string",
-        description: "【必填 - 本步骤的唯一证据栏】仅填写直接支撑上述结论的最新、最具体信息。必须源自本步骤前刚执行的行动（如 `read` 或 `search`）。格式应为：'关键发现：[具体事实、数据或原文引用]。' 严禁复述之前步骤已提交的信息。"
+        description: "【必填 - 本步证据快照】仅记录刚刚执行的搜索/阅读步骤中直接获取的具体事实或数据。格式强制为：'关键发现：[引用本轮获取的原文/数据/结论]。' ❌ 严禁复述之前步骤已记录的信息，❌ 严禁依靠模型内部知识编造未搜索到的内容。"
       },
       searchedKeywords: {
         type: "array",
         items: {
           type: "string"
         },
-        description: "【必填】本次调用前已经搜索过的关键词列表。用于避免重复搜索相同或相似的内容。每次调用search工具后，应在下一次调用时将新的搜索词添加到此列表中。AI通过对话历史自动维护完整的搜索词列表。如果是第一次调用且尚未搜索，填写['无']。"
+        description: "【单点降维规划】仅规划当前优先级最高的1个独立基础实体。❌ 绝对禁止包含关系/对比/组合型词条（如'A与B的区别'、'A+B组合'）。✅ 必须拆解为原子概念（若需分析A和B的关系，本次仅填'A'，下一轮再填'B'）。原则：一次只锚定一个核心名词。"
       }
     },
     required: ["thought", "nextThoughtNeeded", "thoughtNumber", "totalThoughts", "informationSummary", "searchedKeywords"]

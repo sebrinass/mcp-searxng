@@ -9,17 +9,17 @@ MCP-SearXNG 服务器的完整配置参考。
 | 类别 | 变量 | 必填 | 默认值 |
 |----------|---------|--------|----------|
 | **基础** | `SEARXNG_URL` | ✅ 是 | - |
-| **嵌入** | `ENABLE_EMBEDDING` | 否 | `false` |
+| **嵌入** | `ENABLE_EMBEDDING` | 否 | `true` |
 | | `OLLAMA_HOST` | 否 | `http://localhost:11434` |
 | | `EMBEDDING_MODEL` | 否 | `nomic-embed-text` |
 | | `TOP_K` | 否 | `3` |
 | | `CHUNK_SIZE` | 否 | `1000` |
 | | `CHUNK_OVERLAP` | 否 | `100` |
-| **缓存** | `ENABLE_CACHE` | 否 | `false` |
+| **缓存** | `ENABLE_CACHE` | 否 | `true` |
 | | `CACHE_TTL` | 否 | `300` |
 | | `CACHE_MAX_SIZE` | 否 | `1000` |
-| | `CACHE_SEARCH` | 否 | `false` |
-| | `CACHE_EMBEDDING` | 否 | `false` |
+| | `CACHE_SEARCH` | 否 | `true` |
+| | `CACHE_EMBEDDING` | 否 | `true` |
 | **网络** | `FETCH_TIMEOUT` | 否 | `30000` |
 | | `USER_AGENT` | 否 | - |
 | | `HTTP_PROXY` | 否 | - |
@@ -360,7 +360,7 @@ CACHE_MAX_SIZE=5000  # 更大的缓存，更多内存
 
 **必填：** 否
 
-**默认值：** `false`
+**默认值：** `true`
 
 **描述：** 启用搜索结果缓存。
 
@@ -370,8 +370,8 @@ CACHE_MAX_SIZE=5000  # 更大的缓存，更多内存
 
 **示例：**
 ```bash
-CACHE_SEARCH=true   # 缓存搜索结果
-CACHE_SEARCH=false  # 不缓存搜索结果（默认）
+CACHE_SEARCH=true   # 缓存搜索结果（推荐）
+CACHE_SEARCH=false  # 不缓存搜索结果
 ```
 
 **注意：**
@@ -383,7 +383,7 @@ CACHE_SEARCH=false  # 不缓存搜索结果（默认）
 
 **必填：** 否
 
-**默认值：** `false`
+**默认值：** `true`
 
 **描述：** 启用嵌入向量缓存。
 
@@ -393,13 +393,14 @@ CACHE_SEARCH=false  # 不缓存搜索结果（默认）
 
 **示例：**
 ```bash
-CACHE_EMBEDDING=true   # 缓存嵌入
-CACHE_EMBEDDING=false  # 不缓存嵌入（默认）
+CACHE_EMBEDDING=true   # 缓存嵌入（推荐）
+CACHE_EMBEDDING=false  # 不缓存嵌入
 ```
 
 **注意：**
 - 嵌入计算开销大
 - 缓存显著提高性能
+- 建议保持启用
 
 ---
 

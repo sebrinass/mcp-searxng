@@ -32,8 +32,7 @@ export const WEB_SEARCH_TOOL: Tool = {
     properties: {
       query: {
         type: "string",
-        description:
-          "The search query. This is the main input for the web search",
+        description: "【单实体聚焦搜索】仅针对唯一的核心主体发起查询（支持'是什么'/'定义'/'特征'）。❌ 严禁在单次查询中包含两个及以上不同主体（如禁止搜'A和B的对比'、'A对B的影响'）。✅ 正确抽象示例：'主体A 定义'、'主体B 机制'。⚠️ 必须拆分为单主体关键词，否则搜索结果将为空。"
       },
       pageno: {
         type: "number",
