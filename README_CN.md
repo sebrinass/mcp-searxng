@@ -57,7 +57,7 @@ Fork 自 [ihor-sokoliuk/mcp-searxng](https://github.com/ihor-sokoliuk/mcp-searxn
 - `pageno`（数字，可选）：页码（默认：1）
 - `time_range`（字符串，可选）："day"、"month" 或 "year"
 - `language`（字符串，可选）：语言代码（如 "en"、"zh"）
-- `safesearch`（数字，可选）：0（无）、1（中等）、2（严格）
+- `safesearch`（字符串，可选）："0"（无）、"1"（中等）、"2"（严格）
 
 **示例：**
 ```json
@@ -74,14 +74,19 @@ Fork 自 [ihor-sokoliuk/mcp-searxng](https://github.com/ihor-sokoliuk/mcp-searxn
 
 **参数：**
 - `url`（字符串，必填）：要读取的 URL
-- `maxLength`（数字，可选）：最多返回字符数（默认：3000）
+- `urls`（字符串数组，可选）：批量读取多个 URL
+- `startChar`（数字，可选）：起始字符位置（默认：0）
+- `maxLength`（数字，可选）：最多返回字符数（默认：5000）
 - `section`（字符串，可选）：提取特定标题下的内容
+- `paragraphRange`（字符串，可选）：返回特定段落范围（如："1-5"、"3"、"10-"）
 - `readHeadings`（布尔值，可选）：仅返回标题列表
 - `timeoutMs`（数字，可选）：请求超时时间（毫秒，默认：30000）
 
 **功能：**
 - 自动 Puppeteer（可选）降级渲染 JavaScript
 - 内容提取去除导航和广告
+- 分块读取大文档
+- 段落范围筛选
 - robots.txt 合规（可选）
 
 **示例：**
@@ -209,6 +214,27 @@ docker pull ghcr.io/sebrinass/mcp-searxng:latest
 - `EMBEDDING_MODEL`：嵌入模型（默认：`nomic-embed-text`）
 
 **完整配置：** [CONFIGURATION.md](./CONFIGURATION.md)
+
+## 架构与集成
+
+本项目集成了多个开源项目的成熟技术：
+
+### URL 读取（read 工具）
+- **内容提取**：使用 [@mozilla/readability](https://github.com/mozilla/readability) 从 HTML 中提取主要内容
+- **HTML 转 Markdown**：使用 [node-html-markdown](https://github.com/stonekite/node-html-markdown) 进行转换
+- **JavaScript 渲染**：Puppeteer 回退支持 SPA（单页应用）
+- **参考来源**： [Jina AI Reader](https://github.com/jina-ai/reader)
+
+### 结构化思考（research 工具）
+- **框架**：带证据追踪的逐步思考过程
+- **功能**：思考历史、修订支持、分支工作流
+- **基于**： [MCP Sequential Thinking](https://github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking)
+
+### 混合检索
+- **稀疏检索**：BM25 算法进行关键词匹配
+- **密集检索**：Ollama 嵌入进行语义相似度计算
+- **融合**：加权组合（30% BM25 + 70% 语义）
+- **自定义实现**：针对 AI 助手工作流在本地优化
 
 ## 开发
 
