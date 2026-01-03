@@ -286,8 +286,8 @@ MAX_RESULTS_PER_KEYWORD=5
 
 ```yaml
 services:
-  mcp-searxng:
-    image: mcp-searxng:latest
+  mcp-augmented-search:
+    image: mcp-augmented-search:latest
     stdin_open: true
     environment:
       - SEARXNG_URL=http://host.docker.internal:8080

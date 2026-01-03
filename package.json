@@ -1,14 +1,14 @@
 {
-    "name": "mcp-searxng",
+    "name": "mcp-augmented-search",
     "version": "0.8.0",
     "description": "MCP server for SearXNG integration",
     "license": "MIT",
     "author": "sebrinass (https://github.com/sebrinass)",
-    "homepage": "https://github.com/sebrinass/mcp-searxng",
-    "bugs": "https://github.com/sebrinass/mcp-searxng/issues",
+    "homepage": "https://github.com/sebrinass/mcp-augmented-search",
+    "bugs": "https://github.com/sebrinass/mcp-augmented-search/issues",
     "repository": {
         "type": "git",
-        "url": "https://github.com/sebrinass/mcp-searxng"
+        "url": "https://github.com/sebrinass/mcp-augmented-search"
     },
     "keywords": [
         "mcp",
@@ -24,7 +24,7 @@
     ],
     "type": "module",
     "bin": {
-        "mcp-searxng": "dist/index.js"
+        "mcp-augmented-search": "dist/index.js"
     },
     "main": "dist/index.js",
     "files": [

@@ -40,7 +40,7 @@ Fork 自 [ihor-sokoliuk/mcp-searxng](https://github.com/ihor-sokoliuk/mcp-searxn
   "mcpServers": {
     "searxng": {
       "command": "npx",
-      "args": ["-y", "mcp-searxng"],
+      "args": ["-y", "mcp-augmented-search"],
       "env": {
         "SEARXNG_URL": "http://localhost:8080"
       }
@@ -56,7 +56,7 @@ Fork 自 [ihor-sokoliuk/mcp-searxng](https://github.com/ihor-sokoliuk/mcp-searxn
   "mcpServers": {
     "searxng": {
       "command": "npx",
-      "args": ["-y", "mcp-searxng"],
+      "args": ["-y", "mcp-augmented-search"],
       "env": {
         "SEARXNG_URL": "http://localhost:8080",
         "ENABLE_EMBEDDING": "true",
@@ -120,7 +120,7 @@ Fork 自 [ihor-sokoliuk/mcp-searxng](https://github.com/ihor-sokoliuk/mcp-searxn
 ### Docker
 
 ```bash
-docker build -t mcp-searxng:latest .
+docker build -t mcp-augmented-search:latest .
 ```
 
 ```json
@@ -128,7 +128,7 @@ docker build -t mcp-searxng:latest .
   "mcpServers": {
     "searxng": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "SEARXNG_URL", "mcp-searxng:latest"],
+      "args": ["run", "-i", "--rm", "-e", "SEARXNG_URL", "mcp-augmented-search:latest"],
       "env": {
         "SEARXNG_URL": "http://host.docker.internal:8080"
       }
@@ -140,13 +140,13 @@ docker build -t mcp-searxng:latest .
 ### NPX
 
 ```bash
-npx -y mcp-searxng
+npx -y mcp-augmented-search
 ```
 
 ### NPM
 
 ```bash
-npm install -g mcp-searxng
+npm install -g mcp-augmented-search
 ```
 
 ## 配置
