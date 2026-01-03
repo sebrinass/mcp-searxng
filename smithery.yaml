@@ -1,0 +1,124 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+startCommand:
+  type: stdio
+configSchema:
+  # JSON Schema defining the configuration options for the MCP.
+  type: object
+  required:
+    - searxngUrl
+  properties:
+    searxngUrl:
+      type: string
+      description: The URL of the SearXNG instance.
+    authUsername:
+      type: string
+      description: Optional authentication username for the SearXNG instance.
+    authPassword:
+      type: string
+      description: Optional authentication password for the SearXNG instance.
+    userAgent:
+      type: string
+      description: Custom user agent string for HTTP requests.
+    httpProxy:
+      type: string
+      description: HTTP proxy URL for outgoing requests.
+    httpsProxy:
+      type: string
+      description: HTTPS proxy URL for outgoing requests.
+    noProxy:
+      type: string
+      description: Comma-separated list of hosts that should not use proxy.
+    enableEmbedding:
+      type: boolean
+      default: false
+      description: Enable hybrid retrieval with BM25 and embedding.
+    ollamaHost:
+      type: string
+      default: http://localhost:11434
+      description: The URL of the Ollama server for embedding.
+    embeddingModel:
+      type: string
+      default: nomic-embed-text
+      description: The embedding model to use in Ollama.
+    topK:
+      type: number
+      default: 3
+      description: Number of top results to return after embedding reranking.
+    chunkSize:
+      type: number
+      default: 1000
+      description: Size of text chunks for embedding.
+    chunkOverlap:
+      type: number
+      default: 100
+      description: Overlap size between text chunks.
+    enableCache:
+      type: boolean
+      default: false
+      description: Enable semantic caching.
+    cacheTtl:
+      type: number
+      default: 300
+      description: Cache time-to-live in seconds.
+    cacheMaxSize:
+      type: number
+      default: 1000
+      description: Maximum number of cached entries.
+    cacheSearch:
+      type: boolean
+      default: false
+      description: Enable caching for search results.
+    cacheEmbedding:
+      type: boolean
+      default: false
+      description: Enable caching for embedding results.
+    fetchTimeoutMs:
+      type: number
+      default: 30000
+      description: HTTP request timeout in milliseconds.
+    enableRobotsTxt:
+      type: boolean
+      default: false
+      description: Respect robots.txt when fetching URLs.
+    maxKeywords:
+      type: number
+      default: 5
+      description: Maximum number of keywords per search.
+    maxDescriptionLength:
+      type: number
+      default: 300
+      description: Maximum description length in characters.
+    researchSearchTimeoutMs:
+      type: number
+      default: 10000
+      description: Concurrent search timeout in milliseconds.
+commandFunction: |-
+  config => ({ 
+    command: 'node', 
+    args: ['dist/index.js'], 
+    env: { 
+      SEARXNG_URL: config.searxngUrl,
+      AUTH_USERNAME: config.authUsername,
+      AUTH_PASSWORD: config.authPassword,
+      USER_AGENT: config.userAgent,
+      HTTP_PROXY: config.httpProxy,
+      HTTPS_PROXY: config.httpsProxy,
+      NO_PROXY: config.noProxy,
+      ENABLE_EMBEDDING: config.enableEmbedding ? 'true' : 'false',
+      OLLAMA_HOST: config.ollamaHost,
+      EMBEDDING_MODEL: config.embeddingModel,
+      TOP_K: config.topK?.toString() || '3',
+      CHUNK_SIZE: config.chunkSize?.toString() || '1000',
+      CHUNK_OVERLAP: config.chunkOverlap?.toString() || '100',
+      ENABLE_CACHE: config.enableCache ? 'true' : 'false',
+      CACHE_TTL: config.cacheTtl?.toString() || '300',
+      CACHE_MAX_SIZE: config.cacheMaxSize?.toString() || '1000',
+      CACHE_SEARCH: config.cacheSearch ? 'true' : 'false',
+      CACHE_EMBEDDING: config.cacheEmbedding ? 'true' : 'false',
+      FETCH_TIMEOUT_MS: config.fetchTimeoutMs?.toString() || '30000',
+      ENABLE_ROBOTS_TXT: config.enableRobotsTxt ? 'true' : 'false',
+      MAX_KEYWORDS: config.maxKeywords?.toString() || '5',
+      MAX_DESCRIPTION_LENGTH: config.maxDescriptionLength?.toString() || '300',
+      RESEARCH_SEARCH_TIMEOUT_MS: config.researchSearchTimeoutMs?.toString() || '10000'
+    } 
+  })
