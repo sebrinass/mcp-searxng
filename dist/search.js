@@ -3,7 +3,7 @@ import { logMessage } from "./logging.js";
 import { createConfigurationError, createNetworkError, createServerError, createJSONError, createDataError, createNoResultsMessage } from "./error-handler.js";
 import { loadConfig } from "./config.js";
 import { rerankResults } from "./embedding.js";
-import { getCachedSearch, setCachedSearch, isSearchDuplicate, getDuplicateSearchResult, markSearchPerformed, findSimilarSearch, setSimilarSearch } from "./cache.js";
+import { getCachedSearch, setCachedSearch, isSearchDuplicate, getDuplicateSearchResult, markSearchPerformed, findSimilarSearch, setSimilarSearch, isLinkDuplicate, addLinksToDedup } from "./cache.js";
 import { incrementSearchRound, recordSearch, getSearchContext, getCacheHint, getDetailedCacheHint, cacheSearchResults } from "./session-tracker.js";
 function isVideoSite(url, blocklist) {
     try {
@@ -226,6 +226,16 @@ export async function performWebSearch(server, query, pageno = 1, time_range, la
     }
     setCachedSearch(cacheKey, filteredResults);
     let finalResults = filteredResults;
+    const beforeDedup = finalResults.length;
+    finalResults = finalResults.filter(r => !isLinkDuplicate(r.url));
+    const afterDedup = finalResults.length;
+    if (beforeDedup > afterDedup) {
+        logMessage(server, "info", `Link deduplication: removed ${beforeDedup - afterDedup} duplicate links (${afterDedup} unique)`);
+    }
+    if (finalResults.length === 0) {
+        logMessage(server, "info", `All results were duplicates for query: "${query}"`);
+        return createNoResultsMessage(query);
+    }
     if (config.embedding.enabled && filteredResults.length > 0) {
         try {
             logMessage(server, "info", `Starting hybrid retrieval for query: "${query}"`);
@@ -254,6 +264,9 @@ export async function performWebSearch(server, query, pageno = 1, time_range, la
         await setSimilarSearch(query, finalResults);
         logMessage(server, "info", `Saved to semantic cache: "${query}"`);
     }
+    const newUrls = finalResults.map(r => r.url);
+    addLinksToDedup(newUrls);
+    logMessage(server, "info", `Added ${newUrls.length} links to dedup pool`);
     const searchContext = getSearchContext(sessionId);
     const cacheHint = getDetailedCacheHint(sessionId, query);
     const contextMarker = [searchContext, cacheHint].filter(Boolean).join('\n\n');

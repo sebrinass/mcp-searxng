@@ -13,7 +13,7 @@ import {
 } from "./error-handler.js";
 import { loadConfig } from "./config.js";
 import { rerankResults, getEmbedding } from "./embedding.js";
-import { getCachedSearch, setCachedSearch, getCacheStats, isSearchDuplicate, getDuplicateSearchResult, markSearchPerformed, findSimilarSearch, setSimilarSearch } from "./cache.js";
+import { getCachedSearch, setCachedSearch, getCacheStats, isSearchDuplicate, getDuplicateSearchResult, markSearchPerformed, findSimilarSearch, setSimilarSearch, isLinkDuplicate, addLinksToDedup } from "./cache.js";
 import { incrementSearchRound, recordSearch, getSearchContext, getCacheHint, getDetailedCacheHint, cacheSearchResults } from "./session-tracker.js";
 
 export interface SearchResult {
@@ -292,6 +292,18 @@ export async function performWebSearch(
 
   let finalResults = filteredResults;
 
+  const beforeDedup = finalResults.length;
+  finalResults = finalResults.filter(r => !isLinkDuplicate(r.url));
+  const afterDedup = finalResults.length;
+  if (beforeDedup > afterDedup) {
+    logMessage(server, "info", `Link deduplication: removed ${beforeDedup - afterDedup} duplicate links (${afterDedup} unique)`);
+  }
+
+  if (finalResults.length === 0) {
+    logMessage(server, "info", `All results were duplicates for query: "${query}"`);
+    return createNoResultsMessage(query);
+  }
+
   if (config.embedding.enabled && filteredResults.length > 0) {
     try {
       logMessage(server, "info", `Starting hybrid retrieval for query: "${query}"`);
@@ -324,6 +336,10 @@ export async function performWebSearch(
     await setSimilarSearch(query, finalResults);
     logMessage(server, "info", `Saved to semantic cache: "${query}"`);
   }
+
+  const newUrls = finalResults.map(r => r.url);
+  addLinksToDedup(newUrls);
+  logMessage(server, "info", `Added ${newUrls.length} links to dedup pool`);
 
   const searchContext = getSearchContext(sessionId);
   const cacheHint = getDetailedCacheHint(sessionId, query);

@@ -18,11 +18,10 @@ MCP-SearXNG 完整配置参考。
 | | `TOP_K` | 否 | `3` |
 | | `CHUNK_SIZE` | 否 | `1000` |
 | | `CHUNK_OVERLAP` | 否 | `100` |
-| **缓存** | `ENABLE_CACHE` | 否 | `false` |
-| | `CACHE_TTL` | 否 | `300` |
+| **缓存** | `CACHE_TTL` | 否 | `120` |
 | | `CACHE_MAX_SIZE` | 否 | `1000` |
-| | `CACHE_SEARCH` | 否 | `false` |
-| | `CACHE_EMBEDDING` | 否 | `false` |
+| | `CACHE_EMBEDDING` | 否 | `true` |
+| | `CACHE_URL` | 否 | `true` |
 | **搜索** | `MAX_KEYWORDS` | 否 | `5` |
 | | `MAX_DESCRIPTION_LENGTH` | 否 | `300` |
 | | `RESEARCH_SEARCH_TIMEOUT_MS` | 否 | `10000` |
@@ -190,27 +189,16 @@ CHUNK_OVERLAP=100  # 默认
 
 ## 缓存配置
 
-### ENABLE_CACHE
-
-**默认值：** `false`
-
-启用 URL、搜索结果和嵌入向量的缓存。
-
-```bash
-ENABLE_CACHE=true   # 启用
-ENABLE_CACHE=false  # 禁用（默认）
-```
-
 ### CACHE_TTL
 
-**默认值：** `300`（5 分钟）
+**默认值：** `120`（2 分钟）
 
-缓存生存时间（秒）。
+搜索缓存生存时间（秒）。
 
 ```bash
+CACHE_TTL=120    # 2 分钟（默认）
 CACHE_TTL=300    # 5 分钟
 CACHE_TTL=600    # 10 分钟
-CACHE_TTL=3600   # 1 小时
 ```
 
 ### CACHE_MAX_SIZE
@@ -224,27 +212,32 @@ CACHE_MAX_SIZE=500
 CACHE_MAX_SIZE=1000  # 默认
 ```
 
-### CACHE_SEARCH
-
-**默认值：** `false`
-
-是否缓存搜索结果。
-
-```bash
-CACHE_SEARCH=true   # 启用
-CACHE_SEARCH=false  # 禁用（默认）
-```
-
 ### CACHE_EMBEDDING
 
-**默认值：** `false`
+**默认值：** `true`
 
 是否缓存嵌入向量。
 
 ```bash
-CACHE_EMBEDDING=true   # 启用
-CACHE_EMBEDDING=false  # 禁用（默认）
+CACHE_EMBEDDING=true   # 启用（默认）
+CACHE_EMBEDDING=false  # 禁用
 ```
+
+### CACHE_URL
+
+**默认值：** `true`
+
+是否缓存 URL 内容。
+
+```bash
+CACHE_URL=true   # 启用（默认）
+CACHE_URL=false  # 禁用
+```
+
+**说明：**
+- 搜索缓存强制开启，TTL 为 120 秒
+- 链接去重池最大 100 条，超出后自动删除最早的链接
+- 嵌入缓存和 URL 缓存可独立控制
 
 ---
 
@@ -422,9 +415,9 @@ EMBEDDING_PROVIDER=ollama
 OLLAMA_HOST=http://localhost:11434
 EMBEDDING_MODEL=nomic-embed-text
 
-# 缓存
-ENABLE_CACHE=true
-CACHE_TTL=300
+# 缓存（搜索缓存强制开启，120秒 TTL）
+CACHE_EMBEDDING=true
+CACHE_URL=true
 
 # 搜索
 MAX_KEYWORDS=5
@@ -443,9 +436,9 @@ OPENAI_API_KEY=sk-proj-xxxxxxxxxxxx
 OPENAI_API_ENDPOINT=https://api.openai.com/v1
 EMBEDDING_MODEL=text-embedding-3-small
 
-# 缓存
-ENABLE_CACHE=true
-CACHE_TTL=300
+# 缓存（搜索缓存强制开启，120秒 TTL）
+CACHE_EMBEDDING=true
+CACHE_URL=true
 
 # 搜索
 MAX_KEYWORDS=5
@@ -473,7 +466,8 @@ services:
       - ENABLE_EMBEDDING=true
       - EMBEDDING_PROVIDER=ollama
       - OLLAMA_HOST=http://host.docker.internal:11434
-      - ENABLE_CACHE=true
+      - CACHE_EMBEDDING=true
+      - CACHE_URL=true
 ```
 
 **使用 OpenAI：**
@@ -489,7 +483,8 @@ services:
       - EMBEDDING_PROVIDER=openai
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - EMBEDDING_MODEL=text-embedding-3-small
-      - ENABLE_CACHE=true
+      - CACHE_EMBEDDING=true
+      - CACHE_URL=true
 ```
 
 ---
@@ -504,7 +499,7 @@ services:
 
 ### 缓存不工作
 
-1. 是否设置了 `ENABLE_CACHE=true`？
+1. 检查 `CACHE_EMBEDDING` 和 `CACHE_URL` 值
 2. 检查 TTL 和 MAX_SIZE 值
 
 ### Puppeteer 不工作

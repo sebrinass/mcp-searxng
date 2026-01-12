@@ -1,5 +1,41 @@
 import { loadConfig } from './config.js';
 import { getEmbedding, cosineSimilarity, calculateBM25 } from './embedding.js';
+class LinkDeduplication {
+    seenUrls = new Map();
+    maxUrls = 100;
+    isDuplicate(url) {
+        return this.seenUrls.has(url);
+    }
+    addUrls(urls) {
+        for (const url of urls) {
+            if (!this.seenUrls.has(url)) {
+                this.seenUrls.set(url, { timestamp: Date.now() });
+            }
+        }
+        while (this.seenUrls.size > this.maxUrls) {
+            let oldestKey = null;
+            let oldestTime = Infinity;
+            for (const [key, entry] of this.seenUrls) {
+                if (entry.timestamp < oldestTime) {
+                    oldestTime = entry.timestamp;
+                    oldestKey = key;
+                }
+            }
+            if (oldestKey) {
+                this.seenUrls.delete(oldestKey);
+            }
+        }
+    }
+    clear() {
+        this.seenUrls.clear();
+    }
+    getStats() {
+        return {
+            size: this.seenUrls.size,
+            maxSize: this.maxUrls
+        };
+    }
+}
 class SessionDeduplication {
     recentSearches = new Map();
     maxRecentSearches = 100;
@@ -196,7 +232,7 @@ class UrlMemoryCache {
         return Date.now() - timestamp > this.config.ttl * 1000;
     }
     get(url) {
-        if (!this.config.enabled) {
+        if (!this.config.urlEnabled) {
             return null;
         }
         const entry = this.urlCache.get(url);
@@ -214,7 +250,7 @@ class UrlMemoryCache {
         };
     }
     set(url, htmlContent, markdownContent) {
-        if (!this.config.enabled) {
+        if (!this.config.urlEnabled) {
             return;
         }
         if (this.urlCache.has(url)) {
@@ -292,9 +328,6 @@ class MemoryCache {
         return Date.now() - timestamp > this.config.ttl * 1000;
     }
     getSearch(query) {
-        if (!this.config.enabled || !this.config.searchEnabled) {
-            return null;
-        }
         const key = this.getCacheKey(query);
         const entry = this.searchCache.get(key);
         if (!entry) {
@@ -309,9 +342,6 @@ class MemoryCache {
         return entry;
     }
     setSearch(query, results) {
-        if (!this.config.enabled || !this.config.searchEnabled) {
-            return;
-        }
         const key = this.getCacheKey(query);
         if (this.searchCache.has(key)) {
             const entry = this.searchCache.get(key);
@@ -333,7 +363,7 @@ class MemoryCache {
         }
     }
     getEmbedding(text) {
-        if (!this.config.enabled || !this.config.embeddingEnabled) {
+        if (!this.config.embeddingEnabled) {
             return null;
         }
         const key = this.getCacheKey(text);
@@ -350,7 +380,7 @@ class MemoryCache {
         return entry.data;
     }
     setEmbedding(text, embedding) {
-        if (!this.config.enabled || !this.config.embeddingEnabled) {
+        if (!this.config.embeddingEnabled) {
             return;
         }
         const key = this.getCacheKey(text);
@@ -397,6 +427,7 @@ class MemoryCache {
 export const urlCache = new UrlMemoryCache();
 export const cache = new MemoryCache();
 export const sessionDedup = new SessionDeduplication();
+export const linkDedup = new LinkDeduplication();
 export function getCachedEmbedding(text) {
     return cache.getEmbedding(text);
 }
@@ -442,4 +473,16 @@ export function clearSemanticCache() {
 }
 export function getSemanticCacheStats() {
     return semanticCache.getStats();
+}
+export function isLinkDuplicate(url) {
+    return linkDedup.isDuplicate(url);
+}
+export function addLinksToDedup(urls) {
+    linkDedup.addUrls(urls);
+}
+export function clearLinkDedup() {
+    linkDedup.clear();
+}
+export function getLinkDedupStats() {
+    return linkDedup.getStats();
 }

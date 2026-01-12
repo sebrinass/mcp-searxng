@@ -19,6 +19,50 @@ interface UrlCacheEntry {
   timestamp: number;
 }
 
+class LinkDeduplication {
+  private seenUrls: Map<string, { timestamp: number }> = new Map();
+  private readonly maxUrls = 100;
+
+  isDuplicate(url: string): boolean {
+    return this.seenUrls.has(url);
+  }
+
+  addUrls(urls: string[]): void {
+    for (const url of urls) {
+      if (!this.seenUrls.has(url)) {
+        this.seenUrls.set(url, { timestamp: Date.now() });
+      }
+    }
+
+    while (this.seenUrls.size > this.maxUrls) {
+      let oldestKey: string | null = null;
+      let oldestTime = Infinity;
+
+      for (const [key, entry] of this.seenUrls) {
+        if (entry.timestamp < oldestTime) {
+          oldestTime = entry.timestamp;
+          oldestKey = key;
+        }
+      }
+
+      if (oldestKey) {
+        this.seenUrls.delete(oldestKey);
+      }
+    }
+  }
+
+  clear(): void {
+    this.seenUrls.clear();
+  }
+
+  getStats(): { size: number; maxSize: number } {
+    return {
+      size: this.seenUrls.size,
+      maxSize: this.maxUrls
+    };
+  }
+}
+
 class SessionDeduplication {
   private recentSearches: Map<string, { timestamp: number; results: SearchCacheEntry['results'] | null }> = new Map();
   private readonly maxRecentSearches = 100;
@@ -262,7 +306,7 @@ class UrlMemoryCache {
   }
 
   get(url: string): { htmlContent: string; markdownContent: string } | null {
-    if (!this.config.enabled) {
+    if (!this.config.urlEnabled) {
       return null;
     }
 
@@ -285,7 +329,7 @@ class UrlMemoryCache {
   }
 
   set(url: string, htmlContent: string, markdownContent: string): void {
-    if (!this.config.enabled) {
+    if (!this.config.urlEnabled) {
       return;
     }
 
@@ -375,10 +419,6 @@ class MemoryCache {
   }
 
   getSearch(query: string): SearchCacheEntry | null {
-    if (!this.config.enabled || !this.config.searchEnabled) {
-      return null;
-    }
-
     const key = this.getCacheKey(query);
     const entry = this.searchCache.get(key);
 
@@ -397,10 +437,6 @@ class MemoryCache {
   }
 
   setSearch(query: string, results: SearchCacheEntry['results']): void {
-    if (!this.config.enabled || !this.config.searchEnabled) {
-      return;
-    }
-
     const key = this.getCacheKey(query);
 
     if (this.searchCache.has(key)) {
@@ -426,7 +462,7 @@ class MemoryCache {
   }
 
   getEmbedding(text: string): number[] | null {
-    if (!this.config.enabled || !this.config.embeddingEnabled) {
+    if (!this.config.embeddingEnabled) {
       return null;
     }
 
@@ -448,7 +484,7 @@ class MemoryCache {
   }
 
   setEmbedding(text: string, embedding: number[]): void {
-    if (!this.config.enabled || !this.config.embeddingEnabled) {
+    if (!this.config.embeddingEnabled) {
       return;
     }
 
@@ -503,6 +539,7 @@ class MemoryCache {
 export const urlCache = new UrlMemoryCache();
 export const cache = new MemoryCache();
 export const sessionDedup = new SessionDeduplication();
+export const linkDedup = new LinkDeduplication();
 
 export function getCachedEmbedding(text: string): number[] | null {
   return cache.getEmbedding(text);
@@ -564,4 +601,20 @@ export function clearSemanticCache(): void {
 
 export function getSemanticCacheStats(): ReturnType<typeof semanticCache.getStats> {
   return semanticCache.getStats();
+}
+
+export function isLinkDuplicate(url: string): boolean {
+  return linkDedup.isDuplicate(url);
+}
+
+export function addLinksToDedup(urls: string[]): void {
+  linkDedup.addUrls(urls);
+}
+
+export function clearLinkDedup(): void {
+  linkDedup.clear();
+}
+
+export function getLinkDedupStats(): ReturnType<typeof linkDedup.getStats> {
+  return linkDedup.getStats();
 }

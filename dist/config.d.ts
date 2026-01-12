@@ -10,11 +10,10 @@ export interface EmbeddingConfig {
     chunkOverlap: number;
 }
 export interface CacheConfig {
-    enabled: boolean;
     ttl: number;
     maxSize: number;
-    searchEnabled: boolean;
     embeddingEnabled: boolean;
+    urlEnabled: boolean;
 }
 export interface FetchConfig {
     timeoutMs: number;

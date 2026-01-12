@@ -11,11 +11,10 @@ export interface EmbeddingConfig {
 }
 
 export interface CacheConfig {
-  enabled: boolean;
   ttl: number;
   maxSize: number;
-  searchEnabled: boolean;
   embeddingEnabled: boolean;
+  urlEnabled: boolean;
 }
 
 export interface FetchConfig {
@@ -83,11 +82,10 @@ export function loadConfig(): Config {
       chunkOverlap: getEnvNumber('CHUNK_OVERLAP', 100),
     },
     cache: {
-      enabled: getEnvBoolean('ENABLE_CACHE', false),
-      ttl: getEnvNumber('CACHE_TTL', 300),
+      ttl: 120,
       maxSize: getEnvNumber('CACHE_MAX_SIZE', 1000),
-      searchEnabled: getEnvBoolean('CACHE_SEARCH', false),
-      embeddingEnabled: getEnvBoolean('CACHE_EMBEDDING', false),
+      embeddingEnabled: getEnvBoolean('CACHE_EMBEDDING', true),
+      urlEnabled: getEnvBoolean('CACHE_URL', true),
     },
     fetch: {
       timeoutMs: getEnvNumber('FETCH_TIMEOUT_MS', 30000),

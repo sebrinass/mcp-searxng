@@ -18,11 +18,10 @@ Complete configuration reference for MCP-SearXNG.
 | | `TOP_K` | No | `3` |
 | | `CHUNK_SIZE` | No | `1000` |
 | | `CHUNK_OVERLAP` | No | `100` |
-| **Cache** | `ENABLE_CACHE` | No | `false` |
-| | `CACHE_TTL` | No | `300` |
+| **Cache** | `CACHE_TTL` | No | `120` |
 | | `CACHE_MAX_SIZE` | No | `1000` |
-| | `CACHE_SEARCH` | No | `false` |
-| | `CACHE_EMBEDDING` | No | `false` |
+| | `CACHE_EMBEDDING` | No | `true` |
+| | `CACHE_URL` | No | `true` |
 | **Search** | `MAX_KEYWORDS` | No | `5` |
 | | `MAX_DESCRIPTION_LENGTH` | No | `300` |
 | | `RESEARCH_SEARCH_TIMEOUT_MS` | No | `10000` |
@@ -190,27 +189,16 @@ CHUNK_OVERLAP=100  # Default
 
 ## Cache
 
-### ENABLE_CACHE
-
-**Default:** `false`
-
-Enable caching for URLs, search results, and embeddings.
-
-```bash
-ENABLE_CACHE=true   # Enable
-ENABLE_CACHE=false  # Disable (default)
-```
-
 ### CACHE_TTL
 
-**Default:** `300` (5 minutes)
+**Default:** `120` (2 minutes)
 
-Cache time-to-live in seconds.
+Search cache time-to-live in seconds.
 
 ```bash
+CACHE_TTL=120    # 2 minutes (default)
 CACHE_TTL=300    # 5 minutes
 CACHE_TTL=600    # 10 minutes
-CACHE_TTL=3600   # 1 hour
 ```
 
 ### CACHE_MAX_SIZE
@@ -224,27 +212,32 @@ CACHE_MAX_SIZE=500
 CACHE_MAX_SIZE=1000  # Default
 ```
 
-### CACHE_SEARCH
-
-**Default:** `false`
-
-Whether to cache search results.
-
-```bash
-CACHE_SEARCH=true   # Enable
-CACHE_SEARCH=false  # Disable (default)
-```
-
 ### CACHE_EMBEDDING
 
-**Default:** `false`
+**Default:** `true`
 
 Whether to cache embedding vectors.
 
 ```bash
-CACHE_EMBEDDING=true   # Enable
-CACHE_EMBEDDING=false  # Disable (default)
+CACHE_EMBEDDING=true   # Enable (default)
+CACHE_EMBEDDING=false  # Disable
 ```
+
+### CACHE_URL
+
+**Default:** `true`
+
+Whether to cache URL content.
+
+```bash
+CACHE_URL=true   # Enable (default)
+CACHE_URL=false  # Disable
+```
+
+**Note:**
+- Search cache is always enabled with 120s TTL
+- Link deduplication pool max 100 links, oldest removed when exceeded
+- Embedding cache and URL cache can be independently controlled
 
 ---
 
@@ -422,9 +415,9 @@ EMBEDDING_PROVIDER=ollama
 OLLAMA_HOST=http://localhost:11434
 EMBEDDING_MODEL=nomic-embed-text
 
-# Cache
-ENABLE_CACHE=true
-CACHE_TTL=300
+# Cache (search cache always enabled, 120s TTL)
+CACHE_EMBEDDING=true
+CACHE_URL=true
 
 # Search
 MAX_KEYWORDS=5
@@ -443,9 +436,9 @@ OPENAI_API_KEY=sk-proj-xxxxxxxxxxxx
 OPENAI_API_ENDPOINT=https://api.openai.com/v1
 EMBEDDING_MODEL=text-embedding-3-small
 
-# Cache
-ENABLE_CACHE=true
-CACHE_TTL=300
+# Cache (search cache always enabled, 120s TTL)
+CACHE_EMBEDDING=true
+CACHE_URL=true
 
 # Search
 MAX_KEYWORDS=5
@@ -473,7 +466,8 @@ services:
       - ENABLE_EMBEDDING=true
       - EMBEDDING_PROVIDER=ollama
       - OLLAMA_HOST=http://host.docker.internal:11434
-      - ENABLE_CACHE=true
+      - CACHE_EMBEDDING=true
+      - CACHE_URL=true
 ```
 
 **Using OpenAI:**
@@ -489,7 +483,8 @@ services:
       - EMBEDDING_PROVIDER=openai
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - EMBEDDING_MODEL=text-embedding-3-small
-      - ENABLE_CACHE=true
+      - CACHE_EMBEDDING=true
+      - CACHE_URL=true
 ```
 
 ---
@@ -504,7 +499,7 @@ services:
 
 ### Cache Not Working
 
-1. Is `ENABLE_CACHE=true`?
+1. Check `CACHE_EMBEDDING` and `CACHE_URL` values
 2. Check TTL and MAX_SIZE values
 
 ### Puppeteer Not Working

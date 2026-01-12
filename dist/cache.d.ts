@@ -8,6 +8,17 @@ interface SearchCacheEntry {
     timestamp: number;
     hits: number;
 }
+declare class LinkDeduplication {
+    private seenUrls;
+    private readonly maxUrls;
+    isDuplicate(url: string): boolean;
+    addUrls(urls: string[]): void;
+    clear(): void;
+    getStats(): {
+        size: number;
+        maxSize: number;
+    };
+}
 declare class SessionDeduplication {
     private recentSearches;
     private readonly maxRecentSearches;
@@ -76,6 +87,7 @@ declare class MemoryCache {
 export declare const urlCache: UrlMemoryCache;
 export declare const cache: MemoryCache;
 export declare const sessionDedup: SessionDeduplication;
+export declare const linkDedup: LinkDeduplication;
 export declare function getCachedEmbedding(text: string): number[] | null;
 export declare function setCachedEmbedding(text: string, embedding: number[]): void;
 export declare function getCachedSearch(query: string): SearchCacheEntry | null;
@@ -92,4 +104,8 @@ export declare function findSimilarSearch(query: string): Promise<SearchCacheEnt
 export declare function setSimilarSearch(query: string, results: SearchCacheEntry['results']): Promise<void>;
 export declare function clearSemanticCache(): void;
 export declare function getSemanticCacheStats(): ReturnType<typeof semanticCache.getStats>;
+export declare function isLinkDuplicate(url: string): boolean;
+export declare function addLinksToDedup(urls: string[]): void;
+export declare function clearLinkDedup(): void;
+export declare function getLinkDedupStats(): ReturnType<typeof linkDedup.getStats>;
 export {};

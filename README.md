@@ -62,7 +62,6 @@ Fork of [ihor-sokoliuk/mcp-searxng](https://github.com/ihor-sokoliuk/mcp-searxng
       "env": {
         "SEARXNG_URL": "http://localhost:8080",
         "ENABLE_EMBEDDING": "true",
-        "ENABLE_CACHE": "true",
         "OLLAMA_HOST": "http://localhost:11434"
       }
     }
@@ -158,7 +157,8 @@ npm install -g mcp-augmented-search
 |----------|----------|---------|-------------|
 | `SEARXNG_URL` | Yes | - | SearXNG instance URL |
 | `ENABLE_EMBEDDING` | No | `false` | Enable hybrid retrieval |
-| `ENABLE_CACHE` | No | `false` | Enable caching |
+| `CACHE_EMBEDDING` | No | `true` | Enable embedding vector cache |
+| `CACHE_URL` | No | `true` | Enable URL content cache |
 | `OLLAMA_HOST` | No | `http://localhost:11434` | Ollama server URL |
 | `MAX_KEYWORDS` | No | `5` | Max keywords per search |
 | `MAX_DESCRIPTION_LENGTH` | No | `300` | Max description chars |
