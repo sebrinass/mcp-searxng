@@ -12,44 +12,44 @@ export interface SearXNGWeb {
 
 export const READ_URL_TOOL: Tool = {
   name: "read",
-  description: "读取 URL 的内容",
+  description: "读取网页内容并转换为 Markdown 格式",
   inputSchema: {
     type: "object",
     properties: {
       url: {
         type: "string",
-        description: "URL to read",
+        description: "单个网页 URL",
       },
       urls: {
         type: "array",
         items: { type: "string" },
-        description: "Array of URLs to read in batch (alternative to single url parameter)",
+        description: "批量网页 URL 列表（与 url 参数二选一）",
       },
       startChar: {
         type: "number",
-        description: "Starting character position for content extraction (default: 0)",
+        description: "内容提取的起始字符位置（默认：0）",
         minimum: 0,
       },
       maxLength: {
         type: "number",
-        description: "Maximum number of characters to return per URL",
+        description: "每个 URL 返回的最大字符数",
         minimum: 1,
       },
       section: {
         type: "string",
-        description: "Extract content under a specific heading (searches for heading text)",
+        description: "提取特定标题下的内容（搜索标题文本）",
       },
       paragraphRange: {
         type: "string",
-        description: "Return specific paragraph ranges (e.g., '1-5', '3', '10-')",
+        description: "返回特定段落范围（如 '1-5', '3', '10-'）",
       },
       readHeadings: {
         type: "boolean",
-        description: "Return only a list of headings instead of full content",
+        description: "仅返回标题列表而非完整内容",
       },
       timeoutMs: {
         type: "number",
-        description: "Request timeout in milliseconds (default: 30000, from FETCH_TIMEOUT_MS env var)",
+        description: "请求超时时间（毫秒，默认：30000）",
         minimum: 1000,
       },
     },
