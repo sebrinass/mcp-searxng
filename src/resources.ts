@@ -17,7 +17,8 @@ export function createConfigResource() {
       currentLogLevel: getCurrentLogLevel()
     },
     capabilities: {
-      tools: ["searxng_web_search", "web_url_read"],
+      tools: ["search", "read"],
+      prompts: true,
       logging: true,
       resources: true,
       transports: process.env.MCP_HTTP_PORT ? ["stdio", "http"] : ["stdio"]
@@ -28,28 +29,80 @@ export function createConfigResource() {
 }
 
 export function createHelpResource() {
-  return `# SearXNG MCP Server Help
+  return `# MCP Augmented Search Server Help
 
 ## Overview
-This is a Model Context Protocol (MCP) server that provides web search capabilities through SearXNG and URL content reading functionality.
+This is a Model Context Protocol (MCP) server that provides intelligent web search capabilities with built-in research planning and URL content reading functionality.
 
 ## Available Tools
 
-### 1. searxng_web_search
-Performs web searches using the configured SearXNG instance.
+### 1. search
+Performs intelligent web searches with built-in research planning and multi-step thinking.
 
 **Parameters:**
-- \`query\` (required): The search query string
-- \`pageno\` (optional): Page number (default: 1)
-- \`time_range\` (optional): Filter by time - "day", "month", or "year"
-- \`language\` (optional): Language code like "en", "fr", "de" (default: "all")
-- \`safesearch\` (optional): Safe search level - "0" (none), "1" (moderate), "2" (strict)
+- \`thought\` (required): Description of current thinking step
+- \`thoughtNumber\` (required): Current thinking step number (e.g., 1, 2, 3)
+- \`totalThoughts\` (required): Expected total number of thinking steps (e.g., 5, 10)
+- \`nextThoughtNeeded\` (required): Whether to continue thinking
+- \`searchedKeywords\` (optional): Array of keywords to search (max 5). Each keyword should be an independent entity. Automatically executes searches when provided.
+- \`informationSummary\` (optional): Key findings from previous step
+- \`site\` (optional): Limit search to a specific website. Useful when search results reveal knowledge bases or project documentation sites.
+- \`isRevision\` (optional): Whether this is a revision of a previous thought
+- \`revisesThought\` (optional): Which thought number to revise
+- \`branchFromThought\` (optional): Branch from which thought step
+- \`branchId\` (optional): Branch identifier
+- \`needsMoreThoughts\` (optional): Whether more thoughts are needed
 
-### 2. web_url_read
+**Returns:**
+- \`thoughtStatus\`: Thinking status (step number, whether to continue, etc.)
+- \`searchResults\`: Search results for each keyword (includes URLs for further reading)
+
+**Usage:**
+1. Fill in \`thought\` to describe current thinking
+2. Fill in \`searchedKeywords\` to specify keywords to search (max 5, auto-executed)
+3. Decide next step based on returned search results
+4. Use \`read\` tool to deep-dive into specific web pages
+
+**Notes:**
+- Each keyword should be an independent entity, avoid combined queries
+- Search results are sorted by relevance
+- URLs in results can be used with \`read\` tool for deeper reading
+
+### 2. read
 Reads and converts web page content to Markdown format.
 
 **Parameters:**
-- \`url\` (required): The URL to fetch and convert
+- \`url\` (optional): Single URL to read
+- \`urls\` (optional): Array of URLs to read in batch (alternative to single url parameter)
+- \`startChar\` (optional): Starting character position for content extraction (default: 0, minimum: 0)
+- \`maxLength\` (optional): Maximum number of characters to return per URL (minimum: 1)
+- \`section\` (optional): Extract content under a specific heading (searches for heading text)
+- \`paragraphRange\` (optional): Return specific paragraph ranges (e.g., '1-5', '3', '10-')
+- \`readHeadings\` (optional): Return only a list of headings instead of full content
+- \`timeoutMs\` (optional): Request timeout in milliseconds (default: 30000, minimum: 1000)
+
+**Note:** Either \`url\` or \`urls\` parameter must be provided.
+
+## Available Prompts
+
+### 1. search
+Network search tool with built-in research planning.
+
+**Usage:**
+- Directly execute search and return results
+- For deep research, set \`totalThoughts > 1\`
+- Max 5 keywords per step
+- Automatically summarize key findings per step
+
+### 2. read
+Web page content reading tool.
+
+**Usage:**
+- Extract complete main content from web pages
+- Supports batch reading (via \`urls\` parameter)
+- Can limit extraction range (\`section\`, \`paragraphRange\`)
+- Can limit length (\`maxLength\`)
+- Returns plain text format
 
 ## Configuration
 
@@ -72,16 +125,63 @@ RESTful HTTP transport for web applications. Set \`MCP_HTTP_PORT\` to enable.
 
 ## Usage Examples
 
-### Search for recent news
+### Quick search (single step)
 \`\`\`
-Tool: searxng_web_search
-Args: {"query": "latest AI developments", "time_range": "day"}
+Tool: search
+Args: {
+  "thought": "Search for latest AI developments",
+  "thoughtNumber": 1,
+  "totalThoughts": 1,
+  "nextThoughtNeeded": false,
+  "searchedKeywords": ["latest AI developments"]
+}
+\`\`\`
+
+### Deep research (multi-step)
+\`\`\`
+Tool: search
+Args: {
+  "thought": "First step: understand basics of quantum computing",
+  "thoughtNumber": 1,
+  "totalThoughts": 5,
+  "nextThoughtNeeded": true,
+  "searchedKeywords": ["quantum computing basics", "qubit", "superposition"]
+}
 \`\`\`
 
 ### Read a specific article
 \`\`\`
-Tool: web_url_read  
-Args: {"url": "https://example.com/article"}
+Tool: read
+Args: {
+  "url": "https://example.com/article"
+}
+\`\`\`
+
+### Batch read multiple URLs
+\`\`\`
+Tool: read
+Args: {
+  "urls": ["https://example.com/article1", "https://example.com/article2"],
+  "maxLength": 5000
+}
+\`\`\`
+
+### Read specific section
+\`\`\`
+Tool: read
+Args: {
+  "url": "https://example.com/article",
+  "section": "Introduction"
+}
+\`\`\`
+
+### Read specific paragraph range
+\`\`\`
+Tool: read
+Args: {
+  "url": "https://example.com/article",
+  "paragraphRange": "1-5"
+}
 \`\`\`
 
 ## Troubleshooting
@@ -89,7 +189,7 @@ Args: {"url": "https://example.com/article"}
 1. **"SEARXNG_URL not set"**: Configure the SEARXNG_URL environment variable
 2. **Network errors**: Check if SearXNG is running and accessible
 3. **Empty results**: Try different search terms or check SearXNG instance
-4. **Timeout errors**: The server has a 10-second timeout for URL fetching
+4. **Timeout errors**: The server has a configurable timeout for URL fetching (default: 30000ms)
 
 Use logging level "debug" for detailed request information.
 

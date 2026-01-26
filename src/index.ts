@@ -8,6 +8,8 @@ import {
   SetLevelRequestSchema,
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
   LoggingLevel,
 } from "@modelcontextprotocol/sdk/types.js";
 
@@ -94,6 +96,7 @@ const server = new Server(
     capabilities: {
       logging: {},
       resources: {},
+      prompts: {},
       tools: {
         read: {
           description: READ_URL_TOOL.description,
@@ -245,6 +248,86 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 
     default:
       throw new Error(`Unknown resource: ${uri}`);
+  }
+});
+
+// List prompts handler
+server.setRequestHandler(ListPromptsRequestSchema, async () => {
+  logMessage(server, "debug", "Handling list_prompts request");
+  return {
+    prompts: [
+      {
+        name: "search",
+        description: "网络搜索工具",
+        arguments: [
+          {
+            name: "query",
+            description: "搜索关键词",
+            required: true
+          }
+        ]
+      },
+      {
+        name: "read",
+        description: "网页内容读取工具",
+        arguments: [
+          {
+            name: "url",
+            description: "网页URL（单个）",
+            required: false
+          },
+          {
+            name: "urls",
+            description: "网页URL列表（批量）",
+            required: false
+          }
+        ]
+      }
+    ]
+  };
+});
+
+// Get prompt handler
+server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+  logMessage(server, "debug", `Handling get_prompt request for: ${name}`);
+
+  switch (name) {
+    case "search":
+      const query = args?.query as string || "";
+      return {
+        description: "网络搜索工具",
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: `搜索关键词 "${query}"\n\n使用说明：\n- 直接执行搜索并返回结果\n- 如果需要深度研究，设置 totalThoughts > 1\n- 每步最多搜索 5 个关键词\n- 自动总结每步的关键发现`
+            }
+          }
+        ]
+      };
+
+    case "read":
+      const url = args?.url as string || "";
+      const urls = args?.urls as string[] || [];
+      return {
+        description: "网页内容读取工具",
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: url 
+                ? `读取网页 "${url}"\n\n使用说明：\n- 完整提取网页主要内容\n- 支持批量读取（urls 参数）\n- 可限制提取范围（section、paragraphRange）\n- 可限制长度（maxLength）\n- 返回纯文本格式`
+                : `批量读取网页\n\n使用说明：\n- 完整提取网页主要内容\n- 支持批量读取（urls 参数）\n- 可限制提取范围（section、paragraphRange）\n- 可限制长度（maxLength）\n- 返回纯文本格式`
+            }
+          }
+        ]
+      };
+
+    default:
+      throw new Error(`Unknown prompt: ${name}`);
   }
 });
 

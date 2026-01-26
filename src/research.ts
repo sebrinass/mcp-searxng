@@ -291,27 +291,7 @@ export class ResearchServer {
 
 export const SEARCH_TOOL: Tool = {
   name: "search",
-  description: `增强搜索工具 - 规划思考 + 自动搜索
-
-功能：
-1. 记录结构化思考步骤
-2. 自动执行 searchedKeywords 中的搜索（并发）
-3. 返回思考状态 + 搜索结果
-
-使用方法：
-1. 填写 thought 描述当前思考
-2. 填写 searchedKeywords 指定要搜索的词（最多5个，自动执行）
-3. 根据返回的搜索结果决定下一步
-4. 如需深读某个网页，调用 read 工具
-
-返回内容：
-- thoughtStatus: 思考状态（步骤编号、是否继续等）
-- searchResults: 搜索结果（每个keyword的匹配结果，包含URL用于read）
-
-注意：
-- 每个关键词应是独立的实体，避免组合查询
-- 搜索结果已按相关性排序
-- 结果中的URL可用于后续 read 工具深入阅读`,
+  description: "网络搜索工具，支持多步思考和规划",
   inputSchema: {
     type: "object",
     properties: {
